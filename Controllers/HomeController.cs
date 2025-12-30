@@ -15,6 +15,13 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
+        // Si el usuario está autenticado y es Admin, redirigir al panel
+        if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+        {
+            return RedirectToAction("Index", "Admin");
+        }
+
+        // Si no está autenticado o no es Admin, mostrar Home
         return View();
     }
 

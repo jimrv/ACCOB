@@ -1,0 +1,142 @@
+@model ACCOB.ViewModels.CrearAsesorViewModel
+@{
+    ViewData["Title"] = "Crear Asesor";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-person-plus"></i> Crear Nuevo Asesor
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    @if (ViewData.ModelState.ErrorCount > 0)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>¡Error!</strong> Por favor corrija los siguientes errores:
+                            <ul class="mb-0 mt-2">
+                                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                {
+                                    <li>@error.ErrorMessage</li>
+                                }
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    <form method="post" asp-action="CrearAsesor">
+                        <div class="row">
+                            <!-- DNI -->
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Dni" class="form-label fw-bold">
+                                    <i class="bi bi-card-text"></i> DNI
+                                </label>
+                                <input asp-for="Dni" class="form-control form-control-lg"
+                                    placeholder="Ingrese DNI (8 dígitos)" maxlength="8" />
+                                <span asp-validation-for="Dni" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Celular -->
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Celular" class="form-label fw-bold">
+                                    <i class="bi bi-phone"></i> Celular
+                                </label>
+                                <input asp-for="Celular" class="form-control form-control-lg"
+                                    placeholder="Ingrese celular (9 dígitos)" maxlength="9" />
+                                <span asp-validation-for="Celular" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <!-- Nombre Completo -->
+                        <div class="mb-3">
+                            <label asp-for="Nombre" class="form-label fw-bold">
+                                <i class="bi bi-person"></i> Nombre Completo
+                            </label>
+                            <input asp-for="Nombre" class="form-control form-control-lg"
+                                placeholder="Ingrese nombre completo del asesor" />
+                            <span asp-validation-for="Nombre" class="text-danger small"></span>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div class="row">
+                            <!-- Contraseña -->
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Password" class="form-label fw-bold">
+                                    <i class="bi bi-lock"></i> Contraseña
+                                </label>
+                                <input asp-for="Password" class="form-control form-control-lg"
+                                    placeholder="Mínimo 6 caracteres" />
+                                <span asp-validation-for="Password" class="text-danger small"></span>
+                            </div>
+
+                            <!-- Confirmar Contraseña -->
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="ConfirmPassword" class="form-label fw-bold">
+                                    <i class="bi bi-lock-fill"></i> Confirmar Contraseña
+                                </label>
+                                <input asp-for="ConfirmPassword" class="form-control form-control-lg"
+                                    placeholder="Repita la contraseña" />
+                                <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-3" role="alert">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Nota:</strong> El DNI se usará como nombre de usuario para iniciar sesión.
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save"></i> Crear Asesor
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver al Panel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Card de ayuda -->
+            <div class="card mt-3 border-info">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-question-circle text-info"></i> Información
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>El DNI debe tener exactamente 8 dígitos numéricos</li>
+                        <li>El celular debe tener exactamente 9 dígitos numéricos</li>
+                        <li>La contraseña debe tener al menos 6 caracteres</li>
+                        <li>El asesor podrá iniciar sesión usando su DNI y contraseña</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Validación en tiempo real para solo números en DNI y Celular
+        document.addEventListener('DOMContentLoaded', function () {
+            const dniInput = document.getElementById('Dni');
+            const celularInput = document.getElementById('Celular');
+
+            [dniInput, celularInput].forEach(input => {
+                if (input) {
+                    input.addEventListener('input', function (e) {
+                        this.value = this.value.replace(/[^0-9]/g, '');
+                    });
+                }
+            });
+        });
+    </script>
+}

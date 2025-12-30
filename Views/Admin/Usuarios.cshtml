@@ -1,0 +1,112 @@
+@model IEnumerable<ACCOB.Data.ApplicationUser>
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="display-5">
+                    <i class="bi bi-people-fill"></i> Gestión de Usuarios
+                </h1>
+                <p class="text-muted">Lista completa de usuarios del sistema</p>
+            </div>
+            <div>
+                <a asp-action="CrearAsesor" class="btn btn-primary">
+                    <i class="bi bi-person-plus"></i> Crear Nuevo Asesor
+                </a>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver al Panel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>DNI</th>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Celular</th>
+                                    <th>Roles</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model != null && Model.Any())
+                                {
+                                    @foreach (var usuario in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@usuario.Dni</strong>
+                                            </td>
+                                            <td>@usuario.Nombre</td>
+                                            <td>
+                                                <i class="bi bi-envelope"></i> @usuario.Email
+                                            </td>
+                                            <td>
+                                                <i class="bi bi-phone"></i> @usuario.Celular
+                                            </td>
+                                            <td>
+                                                @if (User.Identity.Name == usuario.UserName)
+                                                {
+                                                    <span class="badge bg-danger">Admin (Tú)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-info">Asesor</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (User.Identity.Name != usuario.UserName)
+                                                {
+                                                    <form method="post" asp-action="EliminarUsuario" class="d-inline"
+                                                        onsubmit="return confirm('¿Estás seguro de eliminar a @usuario.Nombre?');">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@usuario.Id" />
+                                                        <button type="submit" class="btn btn-sm btn-danger">
+                                                            <i class="bi bi-trash"></i> Eliminar
+                                                        </button>
+                                                    </form>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">Tu cuenta</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">
+                                            <i class="bi bi-inbox"></i> No hay usuarios registrados
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>Total de usuarios:</strong> @(Model?.Count() ?? 0)
+            </div>
+        </div>
+    </div>
+</div>

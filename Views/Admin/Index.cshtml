@@ -1,0 +1,174 @@
+@model ACCOB.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Panel de Administración";
+}
+
+<div class="container-fluid">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4">
+                <i class="bi bi-speedometer2"></i> Panel de Administración
+            </h1>
+            <p class="lead text-muted">Bienvenido, <strong>@Model.UsuarioActual</strong></p>
+            <hr />
+        </div>
+    </div>
+
+    <!-- Tarjetas de estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Total Usuarios</h5>
+                            <h2 class="display-4">@Model.TotalUsuarios</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-people-fill" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a asp-action="Usuarios" class="text-white text-decoration-none">
+                        Ver todos <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Total Roles</h5>
+                            <h2 class="display-4">@Model.TotalRoles</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-shield-check" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="text-white">Roles activos</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Sistema</h5>
+                            <p class="mb-0">En línea</p>
+                        </div>
+                        <div>
+                            <i class="bi bi-lightning-charge-fill" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <span class="text-white">Estado operativo</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3><i class="bi bi-lightning"></i> Acciones Rápidas</h3>
+            <hr />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-plus-fill text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Crear Asesor</h5>
+                    <p class="card-text text-muted">Registrar un nuevo asesor en el sistema</p>
+                    <a asp-action="CrearAsesor" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Crear
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-people text-success" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Gestionar Usuarios</h5>
+                    <p class="card-text text-muted">Ver y administrar todos los usuarios</p>
+                    <a asp-action="Usuarios" class="btn btn-success">
+                        <i class="bi bi-list-ul"></i> Ver Lista
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-text text-warning" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Reportes</h5>
+                    <p class="card-text text-muted">Generar reportes del sistema</p>
+                    <button class="btn btn-warning" disabled>
+                        <i class="bi bi-file-bar-graph"></i> Próximamente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-gear-fill text-secondary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Configuración</h5>
+                    <p class="card-text text-muted">Ajustes del sistema</p>
+                    <a asp-action="Configuracion" class="btn btn-secondary">
+                        <i class="bi bi-sliders"></i> Configurar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actividad reciente -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3><i class="bi bi-clock-history"></i> Actividad Reciente</h3>
+            <hr />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            Sistema iniciado correctamente
+                            <span class="badge bg-secondary float-end">Hoy</span>
+                        </li>
+                        <li class="list-group-item">
+                            <i class="bi bi-person-check-fill text-info"></i>
+                            Sesión de @Model.UsuarioActual iniciada
+                            <span class="badge bg-secondary float-end">Hace 5 min</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+}
