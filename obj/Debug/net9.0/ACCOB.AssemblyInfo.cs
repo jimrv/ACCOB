@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ACCOB")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e04e1d134f716a93cd904b50d3c8cf2d835c77e0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5398a3ffbfd40bb07b1c183cafe937d7ced8e25a")]
 [assembly: System.Reflection.AssemblyProductAttribute("ACCOB")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ACCOB")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
