@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using ACCOB.Data;
+using ACCOB.Models;
+using ACCOB.ViewModels;
+using Microsoft.EntityFrameworkCore;
+
+namespace ACCOB.Controllers
+{
+    [Authorize(Roles = "Asesor")]
+    public class AsesorController : Controller
+    {
+        private readonly ILogger<AsesorController> _logger;
+        private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public AsesorController(
+            ILogger<AsesorController> logger, 
+            ApplicationDbContext context, 
+            UserManager<ApplicationUser> userManager)
+        {
+            _logger = logger;
+            _context = context;
+            _userManager = userManager;
+        }
+
+        // 1. DASHBOARD: Solo estadísticas rápidas
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            var userId = _userManager.GetUserId(User);
+            
+            var query = _context.Clientes.Where(c => c.AsesorId == userId);
+
+            var model = new AsesorDashboardViewModel
+            {
+                TotalClientes = await query.CountAsync(),
+                ClientesPendientes = await query.CountAsync(c => c.Estado == "Pendiente"),
+                ClientesAtendidos = await query.CountAsync(c => c.Estado == "Atendido"),
+                // En el Dashboard podemos mostrar los últimos 5 registrados
+                Clientes = await query.OrderByDescending(c => c.FechaRegistro).Take(5).ToListAsync()
+            };
+
+            return View(model);
+        }
+
+        // 2. LISTADO: Vista dedicada para buscar y filtrar todos los clientes
+        [HttpGet]
+        public async Task<IActionResult> Listado(string buscar, string estado)
+        {
+            var userId = _userManager.GetUserId(User);
+            var query = _context.Clientes.Where(c => c.AsesorId == userId).AsQueryable();
+
+            if (!string.IsNullOrEmpty(buscar))
+            {
+                query = query.Where(c => c.Nombre.Contains(buscar) || c.Email.Contains(buscar));
+            }
+
+            if (!string.IsNullOrEmpty(estado))
+            {
+                query = query.Where(c => c.Estado == estado);
+            }
+
+            var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
+
+            ViewBag.BusquedaActual = buscar;
+            ViewBag.EstadoActual = estado;
+
+            return View(clientes);
+        }
+
+        // 3. DETALLE: Ver información completa de un cliente
+        [HttpGet]
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null) return NotFound();
+
+            var userId = _userManager.GetUserId(User);
+            var cliente = await _context.Clientes
+                .FirstOrDefaultAsync(m => m.Id == id && m.AsesorId == userId);
+
+            if (cliente == null) return NotFound();
+
+            return View(cliente);
+        }
+
+        // 4. ACCIÓN: Cambiar estado a atendido (desde la vista de detalle)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompletarCliente(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            var cliente = await _context.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id && c.AsesorId == userId);
+
+            if (cliente != null)
+            {
+                cliente.Estado = "Atendido";
+                _context.Update(cliente);
+                await _context.SaveChangesAsync();
+
+                TempData["Mensaje"] = "Cliente marcado como finalizado con éxito.";
+                TempData["TipoMensaje"] = "success";
+            }
+            else
+            {
+                TempData["Mensaje"] = "No se pudo actualizar el cliente.";
+                TempData["TipoMensaje"] = "danger";
+            }
+
+            return RedirectToAction(nameof(Details), new { id = id });
+        }
+
+        [Route("Asesor/Error")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View();
+        }
+    }
+}

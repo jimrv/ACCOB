@@ -97,17 +97,25 @@ namespace ACCOB.Areas.Identity.Pages.Account
                     // Obtener el usuario después del login exitoso
                     var user = await _userManager.FindByNameAsync(Input.UserName);
 
-                    // Redirigir según el rol
-                    if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
+                    if (user != null)
                     {
-                        return RedirectToAction("Index", "Admin");
+                        // 1. Redirigir si es Admin
+                        if (await _userManager.IsInRoleAsync(user, "Admin"))
+                        {
+                            return RedirectToAction("Index", "Admin");
+                        }
+
+                        // 2. Redirigir si es Asesor
+                        if (await _userManager.IsInRoleAsync(user, "Asesor"))
+                        {
+                            // Ajusta "Index" y "Asesor" al nombre de tu Controller y Action reales
+                            return RedirectToAction("Index", "Asesor");
+                        }
                     }
-                    else
-                    {
-                        return LocalRedirect(returnUrl);
-                    }
+
+                    // 3. Redirigir por defecto (si no es ninguno de los anteriores o returnUrl existe)
+                    return LocalRedirect(returnUrl ?? "/");
                 }
-                
                 if (result.RequiresTwoFactor)
                 {
                     return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });

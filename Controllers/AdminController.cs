@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using ACCOB.Data;
 using ACCOB.ViewModels;
+using ACCOB.Models;
 
 namespace ACCOB.Controllers
 {
@@ -12,18 +14,21 @@ namespace ACCOB.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ILogger<AdminController> _logger;
         private readonly ApplicationDbContext _context;
 
         public AdminController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             SignInManager<ApplicationUser> signInManager,
+            ILogger<AdminController> logger,
             ApplicationDbContext context)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _signInManager = signInManager;
             _context = context;
+            _logger = logger;
         }
 
         // GET: Panel principal
@@ -105,6 +110,38 @@ namespace ACCOB.Controllers
             return View();
         }
 
+        // GET: CrearCliente
+        public async Task<IActionResult> CrearCliente()
+        {
+            // Obtener solo los usuarios que tienen el rol de "Asesor"
+            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
+
+            // Pasarlos a la vista para el dropdown
+            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre"); // Usamos tu columna 'Nombre'
+
+            return View();
+        }
+
+        // POST: CrearCliente
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearCliente(Cliente cliente)
+        {
+            if (ModelState.IsValid)
+            {
+                _context.Add(cliente);
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = "Cliente creado y asignado correctamente";
+                TempData["TipoMensaje"] = "success";
+                return RedirectToAction("Usuarios"); // O a una lista de clientes
+            }
+
+            // Si hay error, recargar la lista de asesores
+            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
+            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
+            return View(cliente);
+        }
+
         // POST: Eliminar Usuario
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -139,15 +176,6 @@ namespace ACCOB.Controllers
             }
 
             return RedirectToAction(nameof(Usuarios));
-        }
-
-        // POST: Cerrar Sesión
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout()
-        {
-            await _signInManager.SignOutAsync();
-            return RedirectToAction("Index", "Home");
         }
     }
 }

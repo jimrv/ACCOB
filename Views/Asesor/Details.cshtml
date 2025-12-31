@@ -1,0 +1,44 @@
+@model ACCOB.Models.Cliente
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Expediente del Cliente</h5>
+                    <a asp-action="Listado" class="btn btn-sm btn-light">Volver</a>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4 text-center">
+                        <div class="col-12">
+                            <i class="bi bi-person-circle display-4 text-secondary"></i>
+                            <h3 class="mt-2">@Model.Nombre</h3>
+                            <span class="badge p-2 @(Model.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
+                                Estado: @Model.Estado
+                            </span>
+                        </div>
+                    </div>
+
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Email:</strong> @Model.Email</li>
+                        <li class="list-group-item"><strong>Teléfono:</strong> @(Model.Telefono ?? "No asignado")</li>
+                        <li class="list-group-item"><strong>Fecha de Asignación:</strong> @Model.FechaRegistro.ToString("f")</li>
+                    </ul>
+
+                    @if (Model.Estado != "Atendido")
+                    {
+                        <div class="mt-4 p-3 bg-light rounded text-center">
+                            <p class="text-muted">¿Has terminado la gestión con este cliente?</p>
+                            <form asp-action="CompletarCliente" method="post">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <button type="submit" class="btn btn-success btn-lg px-5">
+                                    <i class="bi bi-check2-circle"></i> Marcar como Finalizado
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
