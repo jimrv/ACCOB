@@ -16,6 +16,15 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
     // LOGIN SOLO CON USUARIO
     options.User.RequireUniqueEmail = false;
+
+    // ⭐ CONFIGURACIÓN DE CONTRASEÑAS PERSONALIZADA
+    options.Password.RequireDigit = true;              // Sí requiere números
+    options.Password.RequiredLength = 6;                // Longitud mínima: 6 caracteres
+    options.Password.RequireNonAlphanumeric = false;    // NO requiere caracteres especiales
+    options.Password.RequireUppercase = false;          // NO requiere mayúsculas obligatorias
+    options.Password.RequireLowercase = false;          // NO requiere minúsculas obligatorias
+    options.Password.RequiredUniqueChars = 1;           // Solo 1 carácter único mínimo
+
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();

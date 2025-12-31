@@ -69,8 +69,11 @@
                                     <i class="bi bi-lock"></i> Contraseña
                                 </label>
                                 <input asp-for="Password" class="form-control form-control-lg"
-                                    placeholder="Mínimo 6 caracteres" />
+                                    placeholder="Mínimo 6 caracteres con números" />
                                 <span asp-validation-for="Password" class="text-danger small"></span>
+                                <small class="form-text text-muted">
+                                    Ejemplo: usuario123, abc456, mipass1
+                                </small>
                             </div>
 
                             <!-- Confirmar Contraseña -->

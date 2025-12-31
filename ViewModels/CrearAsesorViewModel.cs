@@ -22,8 +22,7 @@ namespace ACCOB.ViewModels
         public string Celular { get; set; }
 
         [Required(ErrorMessage = "La contraseña es requerida")]
-        [StringLength(6, MinimumLength = 6, ErrorMessage = "La contraseña debe tener exactamente 6 caracteres")]
-        [RegularExpression(@"^[A-Z]{2}\d{4}$", ErrorMessage = "La contraseña contara con las iniciales del usuario y 4 digitos (Ejemplo: JR3523)")]
+        [StringLength(20, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 20 caracteres")]
         [DataType(DataType.Password)]
         [Display(Name = "Contraseña")]
         public string Password { get; set; }
