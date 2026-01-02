@@ -13,7 +13,7 @@
             <form method="get" asp-action="Listado" class="row g-3 mb-4">
                 <div class="col-md-6">
                     <label class="form-label small fw-bold">Buscar</label>
-                    <input type="text" name="buscar" value="@ViewBag.BusquedaActual" class="form-control" placeholder="Nombre o correo...">
+                    <input type="text" name="buscar" value="@ViewBag.BusquedaActual" class="form-control" placeholder="Dni, nombre o telefono...">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-bold">Estado</label>
@@ -34,6 +34,7 @@
                 <table class="table table-hover border">
                     <thead class="table-light">
                         <tr>
+                            <th>DNI</th>
                             <th>Nombre</th>
                             <th>Contacto</th>
                             <th>Registro</th>
@@ -45,8 +46,9 @@
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td><strong>@item.Nombre</strong></td>
-                                <td>@item.Email</td>
+                                <td><strong>@item.Dni</strong></td>
+                                <td>@item.Nombre</td>
+                                <td>@item.Telefono</td>
                                 <td>@item.FechaRegistro.ToShortDateString()</td>
                                 <td>
                                     <span class="badge @(item.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">

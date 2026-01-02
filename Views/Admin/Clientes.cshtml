@@ -95,8 +95,10 @@
                         <thead class="table-dark">
                             <tr>
                                 <th>Fecha Reg.</th>
+                                <th>DNI</th>
                                 <th>Nombre Cliente</th>
                                 <th>Contacto</th>
+                                <th>Direccion</th>
                                 <th>Estado</th>
                                 <th>Asesor Asignado</th>
                                 <th class="text-center">Acciones</th>
@@ -112,10 +114,14 @@
                                             @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro,
                                             zonaPeru).ToString("dd/MM/yyyy HH:mm")
                                 </td>
-                                <td><strong>@cliente.Nombre</strong></td>
+                                <td><strong>@cliente.Dni</strong></td>
+                                <td>@cliente.Nombre</td>
                                 <td>
                                     <div class="small"><i class="bi bi-envelope"></i> @cliente.Email</div>
                                     <div class="small"><i class="bi bi-phone"></i> @cliente.Telefono</div>
+                                </td>
+                                <td>
+                                    <div class="small"><i class="bi bi-geo-alt"></i> @cliente.Direccion</div>
                                 </td>
                                 <td>
                                     <span
@@ -124,23 +130,36 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <i class="bi bi-person-badge"></i> @(cliente.Asesor?.Nombre ?? "Sin asignar")
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group">
-                                        <a href="#" class="btn btn-sm btn-outline-primary"><i
-                                                class="bi bi-pencil"></i></a>
-                                        <form asp-action="EliminarCliente" method="post" class="d-inline"
-                                            onsubmit="return confirm('¿Eliminar a @cliente.Nombre?');">
-                                            <input type="hidden" name="id" value="@cliente.Id" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                                                        }
+                                    <form asp-action="AsignarAsesor" method="post" class="d-flex gap-1">
+                                        <input type="hidden" name="clienteId" value="@cliente.Id" />
+                                        <select name="asesorId" class="form-select form-select-sm"
+                                            onchange="this.form.submit()">
+                                            <option value="">-- Sin asignar --</option>
+                                            @foreach (var asesor in (SelectList)ViewBag.Asesores)
+                                                    {
+                                                        <!option value="@asesor.Value" @(cliente.AsesorId == asesor.Value ?
+                                                                                                                                       "selected" : "")>
+                                                            @asesor.Text
+                                                        </!option>
+                                                    }
+                                                </select>
+                                            </form>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group">
+                                                <a href="#" class="btn btn-sm btn-outline-primary"><i
+                                                        class="bi bi-pencil"></i></a>
+                                                <form asp-action="EliminarCliente" method="post" class="d-inline"
+                                                    onsubmit="return confirm('¿Eliminar a @cliente.Nombre?');">
+                                                    <input type="hidden" name="id" value="@cliente.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
                             }
                             else
                             {
@@ -166,5 +185,4 @@
             <strong>Total encontrados:</strong> @(Model.Clientes?.Count() ?? 0)
         </div>
     </div>
-</div>
 </div>

@@ -253,7 +253,7 @@ namespace ACCOB.Controllers
         }
 
         // GET: Lista de clientes
-        public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
+        public async Task<IActionResult> Clientes(string? dni, string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
         {
             // Cargar asesores para el dropdown del filtro
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
@@ -261,6 +261,10 @@ namespace ACCOB.Controllers
 
             // Consulta base
             var query = _context.Clientes.Include(c => c.Asesor).AsQueryable();
+
+            // Filtro por Dni
+            if (!string.IsNullOrEmpty(dni))
+                query = query.Where(c => c.Dni.Contains(dni));
 
             // Filtro por Nombre
             if (!string.IsNullOrEmpty(nombre))
@@ -284,6 +288,7 @@ namespace ACCOB.Controllers
             var model = new ClienteListViewModel
             {
                 Clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync(),
+                Dni = dni,
                 Nombre = nombre,
                 Estado = estado,
                 AsesorId = asesorId,
@@ -294,13 +299,119 @@ namespace ACCOB.Controllers
             return View(model);
         }
 
+        [HttpPost]
+        public async Task<IActionResult> AsignarAsesor(int clienteId, string asesorId)
+        {
+            var cliente = await _context.Clientes.FindAsync(clienteId);
+            if (cliente != null)
+            {
+                cliente.AsesorId = string.IsNullOrEmpty(asesorId) ? null : asesorId;
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = "Asesor actualizado correctamente.";
+                TempData["TipoMensaje"] = "success";
+            }
+            return RedirectToAction(nameof(Clientes));
+        }
+
+        // Importar Clientes desde Excel
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportarClientes(IFormFile archivoExcel)
+        {
+            // 1. Validación inicial del archivo
+            if (archivoExcel == null || archivoExcel.Length == 0)
+            {
+                TempData["Mensaje"] = "Por favor, seleccione un archivo Excel válido (.xlsx).";
+                TempData["TipoMensaje"] = "danger";
+                return RedirectToAction(nameof(CrearCliente));
+            }
+
+            try
+            {
+                using (var stream = new MemoryStream())
+                {
+                    await archivoExcel.CopyToAsync(stream);
+
+                    using (var workbook = new XLWorkbook(stream))
+                    {
+                        // Leer la primera hoja del Excel
+                        var hoja = workbook.Worksheet(1);
+
+                        // Obtenemos todas las filas que tienen datos, saltando la primera (cabecera)
+                        var filas = hoja.RangeUsed().RowsUsed().Skip(1);
+
+                        List<Cliente> clientesParaInsertar = new List<Cliente>();
+                        int filasVacias = 0;
+
+                        foreach (var fila in filas)
+                        {
+                            // Extraer datos por número de columna (A=1, B=2, C=3, D=4, E=5)
+                            string dni = fila.Cell(1).GetValue<string>().Trim();
+                            string nombre = fila.Cell(2).GetValue<string>().Trim();
+                            string email = fila.Cell(3).GetValue<string>().Trim();
+                            string telefono = fila.Cell(4).GetValue<string>().Trim();
+                            string direccion = fila.Cell(5).GetValue<string>().Trim();
+
+                            // Validación mínima: DNI y Nombre no pueden estar vacíos
+                            if (string.IsNullOrEmpty(dni) || string.IsNullOrEmpty(nombre))
+                            {
+                                filasVacias++;
+                                continue;
+                            }
+
+                            // Creamos el objeto Cliente
+                            var nuevoCliente = new Cliente
+                            {
+                                Dni = dni,
+                                Nombre = nombre,
+                                Email = email,
+                                Telefono = telefono,
+                                Direccion = direccion,
+                                Estado = "Pendiente",
+                                FechaRegistro = DateTime.UtcNow, // Guardamos en UTC para Postgres
+                                AsesorId = null
+                            };
+
+                            clientesParaInsertar.Add(nuevoCliente);
+                        }
+
+                        if (clientesParaInsertar.Count > 0)
+                        {
+                            // Guardar todos los clientes de golpe en la base de datos
+                            _context.Clientes.AddRange(clientesParaInsertar);
+                            await _context.SaveChangesAsync();
+
+                            TempData["Mensaje"] = $"Se han importado {clientesParaInsertar.Count} clientes correctamente.";
+                            TempData["TipoMensaje"] = "success";
+                        }
+                        else
+                        {
+                            TempData["Mensaje"] = "El archivo no contenía datos válidos o estaba vacío.";
+                            TempData["TipoMensaje"] = "warning";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al importar clientes desde Excel");
+                TempData["Mensaje"] = "Ocurrió un error al procesar el archivo. Asegúrese de usar el formato correcto.";
+                TempData["TipoMensaje"] = "danger";
+                return RedirectToAction(nameof(CrearCliente));
+            }
+
+            return RedirectToAction(nameof(Clientes));
+        }
 
         // Generar Reportes
-        public async Task<IActionResult> ExportarClientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
+        public async Task<IActionResult> ExportarClientes(string? dni, string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
         {
             var query = _context.Clientes.Include(c => c.Asesor).AsQueryable();
 
             // Aplicamos los mismos filtros que en la vista
+            if (!string.IsNullOrEmpty(dni))
+                query = query.Where(c => c.Dni.Contains(dni));
+
             if (!string.IsNullOrEmpty(nombre))
                 query = query.Where(c => c.Nombre.ToLower().Contains(nombre.ToLower()));
 
@@ -326,11 +437,13 @@ namespace ACCOB.Controllers
 
                 // Cabeceras
                 worksheet.Cell(currentRow, 1).Value = "Fecha Registro";
-                worksheet.Cell(currentRow, 2).Value = "Nombre Cliente";
-                worksheet.Cell(currentRow, 3).Value = "Email";
-                worksheet.Cell(currentRow, 4).Value = "Teléfono";
-                worksheet.Cell(currentRow, 5).Value = "Estado";
-                worksheet.Cell(currentRow, 6).Value = "Asesor Asignado";
+                worksheet.Cell(currentRow, 2).Value = "DNI";
+                worksheet.Cell(currentRow, 3).Value = "Nombre Cliente";
+                worksheet.Cell(currentRow, 4).Value = "Email";
+                worksheet.Cell(currentRow, 5).Value = "Teléfono";
+                worksheet.Cell(currentRow, 6).Value = "Dirección";
+                worksheet.Cell(currentRow, 7).Value = "Estado";
+                worksheet.Cell(currentRow, 8).Value = "Asesor Asignado";
 
                 // Estilo de cabecera
                 var headerRow = worksheet.Row(1);
@@ -344,11 +457,13 @@ namespace ACCOB.Controllers
                 {
                     currentRow++;
                     worksheet.Cell(currentRow, 1).Value = TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro, zonaPeru).ToString("dd/MM/yyyy HH:mm");
-                    worksheet.Cell(currentRow, 2).Value = cliente.Nombre;
-                    worksheet.Cell(currentRow, 3).Value = cliente.Email;
-                    worksheet.Cell(currentRow, 4).Value = cliente.Telefono;
-                    worksheet.Cell(currentRow, 5).Value = cliente.Estado;
-                    worksheet.Cell(currentRow, 6).Value = cliente.Asesor?.Nombre ?? "Sin asignar";
+                    worksheet.Cell(currentRow, 2).Value = cliente.Dni;
+                    worksheet.Cell(currentRow, 3).Value = cliente.Nombre;
+                    worksheet.Cell(currentRow, 4).Value = cliente.Email;
+                    worksheet.Cell(currentRow, 5).Value = cliente.Telefono;
+                    worksheet.Cell(currentRow, 6).Value = cliente.Direccion;
+                    worksheet.Cell(currentRow, 7).Value = cliente.Estado;
+                    worksheet.Cell(currentRow, 8).Value = cliente.Asesor?.Nombre ?? "Sin asignar";
                 }
 
                 worksheet.Columns().AdjustToContents(); // Ajustar ancho de columnas automáticamente

@@ -9,6 +9,10 @@ namespace ACCOB.Models
         [Key]
         public int Id { get; set; }
 
+        [Required(ErrorMessage = "El DNI es obligatorio")]
+        [RegularExpression(@"^\d{8,12}$", ErrorMessage = "El DNI debe tener entre 8 y 12 dígitos")]
+        public string Dni { get; set; }
+
         [Required(ErrorMessage = "El nombre es obligatorio")]
         [StringLength(100, ErrorMessage = "El nombre es muy largo")]
         public string Nombre { get; set; }
@@ -22,13 +26,14 @@ namespace ACCOB.Models
         [RegularExpression(@"^\d{9,15}$", ErrorMessage = "El teléfono debe tener entre 9 y 15 dígitos")]
         public string Telefono { get; set; }
 
+        public string Direccion { get; set; }
+
         public string Estado { get; set; } = "Pendiente";
-        
+
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 
-        [Required(ErrorMessage = "Debes asignar un asesor")]
-        public string AsesorId { get; set; }
-        
+        public string? AsesorId { get; set; }
+
         [ForeignKey("AsesorId")]
         public virtual ApplicationUser? Asesor { get; set; }
     }

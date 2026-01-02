@@ -59,7 +59,7 @@ namespace ACCOB.Controllers
 
             if (!string.IsNullOrEmpty(buscar))
             {
-                query = query.Where(c => c.Nombre.Contains(buscar) || c.Email.Contains(buscar));
+                query = query.Where(c => c.Dni.Contains(buscar) ||c.Nombre.Contains(buscar) || c.Telefono.Contains(buscar));
             }
 
             if (!string.IsNullOrEmpty(estado))
