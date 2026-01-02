@@ -39,6 +39,7 @@ namespace ACCOB.Controllers
             {
                 TotalUsuarios = _userManager.Users.Count(),
                 TotalRoles = _roleManager.Roles.Count(),
+                TotalClientes = _context.Clientes.Count(),
                 UsuarioActual = User.Identity.Name
             };
 

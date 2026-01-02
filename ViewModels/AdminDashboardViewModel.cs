@@ -9,6 +9,7 @@ namespace ACCOB.ViewModels
     {
         public int TotalUsuarios { get; set; }
         public int TotalRoles { get; set; }
+        public int TotalClientes { get; set; }
         public string UsuarioActual { get; set; }
     }
 }

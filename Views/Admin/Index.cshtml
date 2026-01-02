@@ -39,6 +39,27 @@
         </div>
 
         <div class="col-md-4">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">Total Clientes</h5>
+                            <h2 class="display-4">@Model.TotalClientes</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-person-lines-fill" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a asp-action="Clientes" class="text-white text-decoration-none">
+                        Ver todos <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
             <div class="card text-white bg-success mb-3">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
@@ -53,25 +74,6 @@
                 </div>
                 <div class="card-footer">
                     <span class="text-white">Roles activos</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card text-white bg-info mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="card-title">Sistema</h5>
-                            <p class="mb-0">En línea</p>
-                        </div>
-                        <div>
-                            <i class="bi bi-lightning-charge-fill" style="font-size: 3rem;"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <span class="text-white">Estado operativo</span>
                 </div>
             </div>
         </div>
@@ -115,12 +117,12 @@
         <div class="col-md-3 mb-3">
             <div class="card h-100 shadow-sm">
                 <div class="card-body text-center">
-                    <i class="bi bi-file-earmark-text text-warning" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-3">Reportes</h5>
-                    <p class="card-text text-muted">Generar reportes del sistema</p>
-                    <button class="btn btn-warning" disabled>
-                        <i class="bi bi-file-bar-graph"></i> Próximamente
-                    </button>
+                    <i class="bi bi-person-plus-fill text-info" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Crear Cliente</h5>
+                    <p class="card-text text-muted">Registrar un nuevo cliente en el sistema</p>
+                    <a asp-action="CrearCliente" class="btn btn-info text-white">
+                        <i class="bi bi-plus-circle"></i> Crear
+                    </a>
                 </div>
             </div>
         </div>
@@ -128,12 +130,12 @@
         <div class="col-md-3 mb-3">
             <div class="card h-100 shadow-sm">
                 <div class="card-body text-center">
-                    <i class="bi bi-gear-fill text-secondary" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-3">Configuración</h5>
-                    <p class="card-text text-muted">Ajustes del sistema</p>
-                    <a asp-action="Configuracion" class="btn btn-secondary">
-                        <i class="bi bi-sliders"></i> Configurar
-                    </a>
+                    <i class="bi bi-file-earmark-text text-warning" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Reportes</h5>
+                    <p class="card-text text-muted">Generar reportes del sistema</p>
+                    <button class="btn btn-warning" disabled>
+                        <i class="bi bi-file-bar-graph"></i> Próximamente
+                    </button>
                 </div>
             </div>
         </div>
