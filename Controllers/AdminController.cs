@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using ClosedXML.Excel;
+using System.IO;
 using ACCOB.Data;
 using ACCOB.ViewModels;
 using ACCOB.Models;
@@ -290,6 +292,76 @@ namespace ACCOB.Controllers
             };
 
             return View(model);
+        }
+
+
+        // Generar Reportes
+        public async Task<IActionResult> ExportarClientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
+        {
+            var query = _context.Clientes.Include(c => c.Asesor).AsQueryable();
+
+            // Aplicamos los mismos filtros que en la vista
+            if (!string.IsNullOrEmpty(nombre))
+                query = query.Where(c => c.Nombre.ToLower().Contains(nombre.ToLower()));
+
+            if (!string.IsNullOrEmpty(estado))
+                query = query.Where(c => c.Estado == estado);
+
+            if (!string.IsNullOrEmpty(asesorId))
+                query = query.Where(c => c.AsesorId == asesorId);
+
+            if (fechaInicio.HasValue)
+                query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
+
+            if (fechaFin.HasValue)
+                query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
+
+            var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
+
+            // Generación del Excel con ClosedXML
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Reporte de Clientes");
+                var currentRow = 1;
+
+                // Cabeceras
+                worksheet.Cell(currentRow, 1).Value = "Fecha Registro";
+                worksheet.Cell(currentRow, 2).Value = "Nombre Cliente";
+                worksheet.Cell(currentRow, 3).Value = "Email";
+                worksheet.Cell(currentRow, 4).Value = "Teléfono";
+                worksheet.Cell(currentRow, 5).Value = "Estado";
+                worksheet.Cell(currentRow, 6).Value = "Asesor Asignado";
+
+                // Estilo de cabecera
+                var headerRow = worksheet.Row(1);
+                headerRow.Style.Font.Bold = true;
+                headerRow.Style.Fill.BackgroundColor = XLColor.Black;
+                headerRow.Style.Font.FontColor = XLColor.White;
+
+                // Datos
+                var zonaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                foreach (var cliente in clientes)
+                {
+                    currentRow++;
+                    worksheet.Cell(currentRow, 1).Value = TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro, zonaPeru).ToString("dd/MM/yyyy HH:mm");
+                    worksheet.Cell(currentRow, 2).Value = cliente.Nombre;
+                    worksheet.Cell(currentRow, 3).Value = cliente.Email;
+                    worksheet.Cell(currentRow, 4).Value = cliente.Telefono;
+                    worksheet.Cell(currentRow, 5).Value = cliente.Estado;
+                    worksheet.Cell(currentRow, 6).Value = cliente.Asesor?.Nombre ?? "Sin asignar";
+                }
+
+                worksheet.Columns().AdjustToContents(); // Ajustar ancho de columnas automáticamente
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    var fileName = $"Reporte_Clientes_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
         }
 
         // POST: Eliminar Cliente

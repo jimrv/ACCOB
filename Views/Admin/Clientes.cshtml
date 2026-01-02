@@ -13,7 +13,11 @@
                 </h1>
                 <p class="text-muted">Lista de clientes registrados y sus asesores asignados</p>
             </div>
-            <div>
+            <div class="d-flex gap-2 align-items-start">
+                <button type="button" onclick="generarReporte()" class="btn btn-success">
+                    <i class="bi bi-file-earmark-excel"></i> Generar Reporte
+                </button>
+
                 <a asp-action="CrearCliente" class="btn btn-primary">
                     <i class="bi bi-person-plus"></i> Registrar Nuevo Cliente
                 </a>
@@ -29,17 +33,17 @@
             <h6 class="mb-0"><i class="bi bi-funnel"></i> Filtros de búsqueda</h6>
         </div>
         <div class="card-body">
-            <form method="get" asp-action="Clientes" class="row g-3">
+            <form id="filterForm" method="get" asp-action="Clientes" class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label small">Nombre del Cliente</label>
-                    <input type="text" name="nombre" value="@Model.Nombre" class="form-control form-control-sm" placeholder="Ej: Juan..." />
+                    <input type="text" name="nombre" value="@Model.Nombre" class="form-control form-control-sm" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">Estado</label>
                     <select name="estado" class="form-select form-select-sm">
                         <option value="">Todos</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Atendido">Atendido</option>
+                        <option value="Pendiente" selected="@(Model.Estado == "Pendiente")">Pendiente</option>
+                        <option value="Atendido" selected="@(Model.Estado == "Atendido")">Atendido</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -50,95 +54,117 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">Desde</label>
-                    <input type="date" name="fechaInicio" value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+                    <input type="date" name="fechaInicio" value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))"
+                        class="form-control form-control-sm" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">Hasta</label>
-                    <input type="date" name="fechaFin" value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+                    <input type="date" name="fechaFin" value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))"
+                        class="form-control form-control-sm" />
                 </div>
                 <div class="col-md-1 d-flex align-items-end gap-1">
                     <button type="submit" class="btn btn-dark btn-sm w-100"><i class="bi bi-search"></i></button>
-                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100" title="Limpiar"><i class="bi bi-x-circle"></i></a>
+                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100"><i
+                            class="bi bi-x-circle"></i></a>
                 </div>
             </form>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Fecha Reg.</th>
-                                    <th>Nombre Cliente</th>
-                                    <th>Contacto</th>
-                                    <th>Estado</th>
-                                    <th>Asesor Asignado</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @if (Model.Clientes != null && Model.Clientes.Any())
-                                {
-                                    @foreach (var cliente in Model.Clientes)
-                                    {
-                                        <tr>
-                                            <td>
-                                                @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro, zonaPeru).ToString("dd/MM/yyyy HH:mm")
-                                            </td>
-                                            <td><strong>@cliente.Nombre</strong></td>
-                                            <td>
-                                                <div class="small"><i class="bi bi-envelope"></i> @cliente.Email</div>
-                                                <div class="small"><i class="bi bi-phone"></i> @cliente.Telefono</div>
-                                            </td>
-                                            <td>
-                                                <span class="badge @(cliente.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
-                                                    @cliente.Estado
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <i class="bi bi-person-badge"></i> @(cliente.Asesor?.Nombre ?? "Sin asignar")
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="btn-group">
-                                                    <a href="#" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                                                    <form asp-action="EliminarCliente" method="post" class="d-inline"
-                                                          onsubmit="return confirm('¿Eliminar a @cliente.Nombre?');">
-                                                        <input type="hidden" name="id" value="@cliente.Id" />
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                }
-                                else
+</div>
+
+@section Scripts {
+    <script>
+        function generarReporte() {
+            // Obtenemos el formulario
+            const form = document.getElementById('filterForm');
+            // Creamos una URL con los parámetros actuales del formulario
+            const params = new URLSearchParams(new FormData(form)).toString();
+            // Redirigimos a la acción de exportar con esos parámetros
+            window.location.href = '@Url.Action("ExportarClientes")?' + params;
+        }
+    </script>
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Fecha Reg.</th>
+                                <th>Nombre Cliente</th>
+                                <th>Contacto</th>
+                                <th>Estado</th>
+                                <th>Asesor Asignado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Clientes != null && Model.Clientes.Any())
+                            {
+                                @foreach (var cliente in Model.Clientes)
                                 {
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">
-                                            <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron clientes registrados
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                                        <td>
+                                            @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro,
+                                            zonaPeru).ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td><strong>@cliente.Nombre</strong></td>
+                                <td>
+                                    <div class="small"><i class="bi bi-envelope"></i> @cliente.Email</div>
+                                    <div class="small"><i class="bi bi-phone"></i> @cliente.Telefono</div>
+                                </td>
+                                <td>
+                                    <span
+                                        class="badge @(cliente.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
+                                        @cliente.Estado
+                                    </span>
+                                </td>
+                                <td>
+                                    <i class="bi bi-person-badge"></i> @(cliente.Asesor?.Nombre ?? "Sin asignar")
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a href="#" class="btn btn-sm btn-outline-primary"><i
+                                                class="bi bi-pencil"></i></a>
+                                        <form asp-action="EliminarCliente" method="post" class="d-inline"
+                                            onsubmit="return confirm('¿Eliminar a @cliente.Nombre?');">
+                                            <input type="hidden" name="id" value="@cliente.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                                                        }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron clientes
+                                        registrados
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="row mt-3">
-        <div class="col-12">
-            <div class="alert alert-info py-2">
-                <i class="bi bi-info-circle"></i>
-                <strong>Total encontrados:</strong> @(Model.Clientes?.Count() ?? 0)
-            </div>
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="alert alert-info py-2">
+            <i class="bi bi-info-circle"></i>
+            <strong>Total encontrados:</strong> @(Model.Clientes?.Count() ?? 0)
         </div>
     </div>
+</div>
 </div>

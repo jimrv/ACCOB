@@ -45,7 +45,7 @@
                     </li>
                     <li>
                         <a class="dropdown-item" asp-controller="Admin" asp-action="Configuracion">
-                            <i class="bi bi-gear"></i> Configuración
+                            <i class="bi bi-person-lines-fill"></i> Reportes
                         </a>
                     </li>
                     <li>
@@ -59,16 +59,13 @@
                             <i class="bi bi-speedometer2"></i> Panel
                         </a>
                     </li>
+                    <li>
+                        <a class="dropdown-item" asp-controller="Asesor" asp-action="Listado">
+                            <i class="bi bi-list-check"></i> Listado
+                        </a>
+                    </li>
                 }
 
-                <li>
-                    <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">
-                        <i class="bi bi-person"></i> Mi Cuenta
-                    </a>
-                </li>
-                <li>
-                    <hr class="dropdown-divider">
-                </li>
                 <li>
                     <form method="post" asp-controller="Account" asp-action="Logout">
                         @Html.AntiForgeryToken()
