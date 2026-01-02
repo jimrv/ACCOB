@@ -35,6 +35,7 @@
                                     <th>Nombre</th>
                                     <th>Email</th>
                                     <th>Celular</th>
+                                    <th>Estado</th>
                                     <th>Roles</th>
                                     <th class="text-center">Acciones</th>
                                 </tr>
@@ -54,6 +55,20 @@
                                             </td>
                                             <td>
                                                 <i class="bi bi-phone"></i> @usuario.Celular
+                                            </td>
+                                            <td id="status-container-@usuario.Id">
+                                                @if (usuario.EstaConectado)
+                                                {
+                                                    <span class="badge bg-success shadow-sm">
+                                                        <i class="bi bi-circle-fill me-1 small"></i> En línea
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary shadow-sm">
+                                                        <i class="bi bi-circle me-1 small"></i> Desconectado
+                                                    </span>
+                                                }
                                             </td>
                                             <td>
                                                 @if (User.Identity.Name == usuario.UserName)
@@ -118,3 +133,25 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/presenceHub")
+            .build();
+
+        connection.on("UserStatusChanged", (userId, isOnline) => {
+            const container = document.getElementById(`status-container-${userId}`);
+            if (container) {
+                if (isOnline) {
+                    container.innerHTML = `<span class="badge bg-success shadow-sm"><i class="bi bi-circle-fill me-1 small"></i> En línea</span>`;
+                } else {
+                    container.innerHTML = `<span class="badge bg-secondary shadow-sm"><i class="bi bi-circle me-1 small"></i> Desconectado</span>`;
+                }
+            }
+        });
+
+        connection.start().catch(err => console.error(err.toString()));
+    </script>
+}

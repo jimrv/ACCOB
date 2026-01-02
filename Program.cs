@@ -38,6 +38,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -55,6 +56,7 @@ else
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.MapHub<PresenceHub>("/presenceHub");
 
 app.UseAuthorization();
 
@@ -100,6 +102,18 @@ using (var scope = app.Services.CreateScope())
         await userManager.CreateAsync(adminUser, "Admin123*");
         await userManager.AddToRoleAsync(adminUser, "Admin");
     }
+}
+
+// Resetear estados de conexión al iniciar el servidor
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var usuariosConectados = context.Users.Where(u => u.EstaConectado).ToList();
+    foreach (var u in usuariosConectados)
+    {
+        u.EstaConectado = false;
+    }
+    context.SaveChanges();
 }
 
 app.Run();

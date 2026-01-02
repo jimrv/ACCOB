@@ -35,13 +35,17 @@ namespace ACCOB.Controllers
         }
 
         // GET: Panel principal
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var model = new AdminDashboardViewModel
             {
-                TotalUsuarios = _userManager.Users.Count(),
-                TotalRoles = _roleManager.Roles.Count(),
-                TotalClientes = _context.Clientes.Count(),
+                TotalUsuarios = await _userManager.Users.CountAsync(),
+                TotalRoles = await _roleManager.Roles.CountAsync(),
+                TotalClientes = await _context.Clientes.CountAsync(),
+
+                // Contamos solo los que tienen el flag EstaConectado en true
+                AsesoresEnLinea = await _context.Users.CountAsync(u => u.EstaConectado),
+
                 UsuarioActual = User.Identity.Name
             };
 
