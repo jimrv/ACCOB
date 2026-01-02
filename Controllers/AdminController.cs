@@ -313,6 +313,43 @@ namespace ACCOB.Controllers
             return RedirectToAction(nameof(Clientes));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarAsesorMasivo(string asesorId, int[] clientesSeleccionados)
+        {
+            if (clientesSeleccionados == null || clientesSeleccionados.Length == 0)
+            {
+                TempData["Mensaje"] = "No seleccionaste ningún cliente.";
+                TempData["TipoMensaje"] = "warning";
+                return RedirectToAction(nameof(Clientes));
+            }
+
+            // Usamos el contexto directamente para asegurar el update
+            var clientes = await _context.Clientes
+                .Where(c => clientesSeleccionados.Contains(c.Id))
+                .ToListAsync();
+
+            foreach (var cliente in clientes)
+            {
+                // Si el asesorId viene vacío del select, guardamos null
+                cliente.AsesorId = string.IsNullOrEmpty(asesorId) ? null : asesorId;
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = $"Se actualizaron {clientes.Count} clientes.";
+                TempData["TipoMensaje"] = "success";
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "Error de base de datos: " + ex.Message;
+                TempData["TipoMensaje"] = "danger";
+            }
+
+            return RedirectToAction(nameof(Clientes));
+        }
+
         // Importar Clientes desde Excel
         [HttpPost]
         [ValidateAntiForgeryToken]

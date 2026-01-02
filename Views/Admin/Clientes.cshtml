@@ -28,6 +28,7 @@
         </div>
     </div>
 
+    @* --- SECCIÓN DE FILTROS --- *@
     <div class="card shadow mb-4">
         <div class="card-header bg-light">
             <h6 class="mb-0"><i class="bi bi-funnel"></i> Filtros de búsqueda</h6>
@@ -64,41 +65,57 @@
                 </div>
                 <div class="col-md-1 d-flex align-items-end gap-1">
                     <button type="submit" class="btn btn-dark btn-sm w-100"><i class="bi bi-search"></i></button>
-                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100"><i
-                            class="bi bi-x-circle"></i></a>
+                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
                 </div>
             </form>
         </div>
     </div>
 
-</div>
+    @* --- TABLA Y ACCIÓN MASIVA --- *@
+    <form id="bulkAssignForm" asp-action="AsignarAsesorMasivo" method="post">
+        @Html.AntiForgeryToken()
 
-@section Scripts {
-    <script>
-        function generarReporte() {
-            // Obtenemos el formulario
-            const form = document.getElementById('filterForm');
-            // Creamos una URL con los parámetros actuales del formulario
-            const params = new URLSearchParams(new FormData(form)).toString();
-            // Redirigimos a la acción de exportar con esos parámetros
-            window.location.href = '@Url.Action("ExportarClientes")?' + params;
-        }
-    </script>
-}
+        @* Barra de Acción Masiva *@
+        <div class="card shadow mb-3 border-primary">
+            <div class="card-body py-2 bg-light d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-primary fw-bold">
+                        <i class="bi bi-check-all"></i>
+                        <span id="contadorSeleccionados" class="badge bg-primary">0</span> Seleccionados:
+                    </span>
+                    <select name="asesorId" id="bulkAsesorId" class="form-select form-select-sm" style="width: 250px;"
+                        required>
+                        <option value="">-- Seleccionar Asesor Destino --</option>
+                        @foreach (var asesor in (SelectList)ViewBag.Asesores)
+                        {
+                            <option value="@asesor.Value">@asesor.Text</option>
+                        }
+                    </select>
+                    <button type="button" onclick="confirmarAsignacionMasiva()" class="btn btn-primary btn-sm">
+                        Asignar Seleccionados
+                    </button>
+                </div>
+                <small class="text-muted">Selecciona los clientes en la tabla para asignarlos de golpe.</small>
+            </div>
+        </div>
 
-<div class="row">
-    <div class="col-12">
         <div class="card shadow">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover table-striped">
+                    <table class="table table-hover table-striped" id="tablaClientes">
                         <thead class="table-dark">
                             <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" id="selectAll" class="form-check-input"
+                                        title="Seleccionar todos" />
+                                </th>
                                 <th>Fecha Reg.</th>
                                 <th>DNI</th>
                                 <th>Nombre Cliente</th>
                                 <th>Contacto</th>
-                                <th>Direccion</th>
+                                <th>Dirección</th>
                                 <th>Estado</th>
                                 <th>Asesor Asignado</th>
                                 <th class="text-center">Acciones</th>
@@ -110,6 +127,10 @@
                                 @foreach (var cliente in Model.Clientes)
                                 {
                                     <tr>
+                                        <td>
+                                            <input type="checkbox" name="clientesSeleccionados" value="@cliente.Id"
+                                                class="form-check-input client-checkbox" />
+                                        </td>
                                         <td>
                                             @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro,
                                             zonaPeru).ToString("dd/MM/yyyy HH:mm")
@@ -130,32 +151,28 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <form asp-action="AsignarAsesor" method="post" class="d-flex gap-1">
-                                        <input type="hidden" name="clienteId" value="@cliente.Id" />
-                                        <select name="asesorId" class="form-select form-select-sm"
-                                            onchange="this.form.submit()">
-                                            <option value="">-- Sin asignar --</option>
-                                            @foreach (var asesor in (SelectList)ViewBag.Asesores)
-                                                    {
-                                                        <!option value="@asesor.Value" @(cliente.AsesorId == asesor.Value ?
-                                                                                                                                       "selected" : "")>
-                                                            @asesor.Text
-                                                        </!option>
-                                                    }
-                                                </select>
-                                            </form>
+                                    @* Select individual (mantiene el onchange para cambios rápidos) *@
+                                            <select class="form-select form-select-sm"
+                                        onchange="asignarIndividual(@cliente.Id, this.value)">
+                                        <option value="">-- Sin asignar --</option>
+                                        @foreach (var asesor in (SelectList)ViewBag.Asesores)
+                                                {
+                                                    <!option value="@asesor.Value" @(cliente.AsesorId == asesor.Value ? "selected" :
+                                                                                                                               "")>
+                                                        @asesor.Text
+                                                    </!option>
+                                                }
+                                            </select>
                                         </td>
                                         <td class="text-center">
                                             <div class="btn-group">
-                                                <a href="#" class="btn btn-sm btn-outline-primary"><i
-                                                        class="bi bi-pencil"></i></a>
-                                                <form asp-action="EliminarCliente" method="post" class="d-inline"
-                                                    onsubmit="return confirm('¿Eliminar a @cliente.Nombre?');">
-                                                    <input type="hidden" name="id" value="@cliente.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </form>
+                                                <a href="#" class="btn btn-sm btn-outline-primary" title="Editar">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="eliminarCliente(@cliente.Id, '@cliente.Nombre')" title="Eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -164,9 +181,8 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron clientes
-                                        registrados
                                     </td>
                                 </tr>
                             }
@@ -175,8 +191,18 @@
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
+
+@* Formularios ocultos para acciones individuales vía JS *@
+<form id="formAsignarIndividual" asp-action="AsignarAsesor" method="post" style="display:none;">
+    <input type="hidden" name="clienteId" id="indivClienteId" />
+    <input type="hidden" name="asesorId" id="indivAsesorId" />
+</form>
+
+<form id="formEliminarCliente" asp-action="EliminarCliente" method="post" style="display:none;">
+    <input type="hidden" name="id" id="deleteClienteId" />
+</form>
 
 <div class="row mt-3">
     <div class="col-12">
@@ -186,3 +212,79 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // 1. Reporte Excel con Filtros
+        function generarReporte() {
+            const form = document.getElementById('filterForm');
+            const params = new URLSearchParams(new FormData(form)).toString();
+            window.location.href = '@Url.Action("ExportarClientes")?' + params;
+        }
+
+        // 2. Lógica de Checkboxes y Contador
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.client-checkbox');
+        const contador = document.getElementById('contadorSeleccionados');
+
+        function actualizarContador() {
+            const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
+            contador.innerText = seleccionados;
+
+            // Cambiar color del contador si hay seleccionados
+            if (seleccionados > 0) {
+                contador.classList.replace('bg-secondary', 'bg-primary');
+            } else {
+                contador.classList.replace('bg-primary', 'bg-secondary');
+            }
+        }
+
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+            actualizarContador();
+        });
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', actualizarContador);
+        });
+
+        // 3. Alerta de Confirmación Masiva
+        function confirmarAsignacionMasiva() {
+            const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
+            const asesorSelect = document.getElementById('bulkAsesorId');
+            const nombreAsesor = asesorSelect.options[asesorSelect.selectedIndex].text;
+
+            if (seleccionados === 0) {
+                alert("Por favor, selecciona al menos un cliente de la lista.");
+                return;
+            }
+
+            if (asesorSelect.value === "") {
+                alert("Por favor, selecciona el asesor al que deseas asignar los clientes.");
+                return;
+            }
+
+            const mensaje = `¿Estás seguro de asignar ${seleccionados} cliente(s) al asesor "${nombreAsesor}"?`;
+
+            if (confirm(mensaje)) {
+                document.getElementById('bulkAssignForm').submit();
+            }
+        }
+
+        // 4. Acciones Individuales (Asignar y Eliminar)
+        function asignarIndividual(clienteId, asesorId) {
+            document.getElementById('indivClienteId').value = clienteId;
+            document.getElementById('indivAsesorId').value = asesorId;
+            document.getElementById('formAsignarIndividual').submit();
+        }
+
+        function eliminarCliente(id, nombre) {
+            if (confirm(`¿Estás seguro de que deseas eliminar al cliente ${nombre}?`)) {
+                document.getElementById('deleteClienteId').value = id;
+                document.getElementById('formEliminarCliente').submit();
+            }
+        }
+    </script>
+}
