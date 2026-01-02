@@ -43,6 +43,16 @@
                                     <i class="bi bi-people"></i> Usuarios
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Admin" asp-action="CrearCliente">
+                                    <i class="bi bi-person-plus"></i> Crear Cliente
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Admin" asp-action="Clientes">
+                                    <i class="bi bi-people"></i> Clientes
+                                </a>
+                            </li>
                         }
                         @if (User.Identity.IsAuthenticated && User.IsInRole("Asesor"))
                         {

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using ACCOB.Data;
 using ACCOB.ViewModels;
 using ACCOB.Models;
@@ -104,44 +105,6 @@ namespace ACCOB.Controllers
             return View(usuarios);
         }
 
-        // GET: Configuración
-        public IActionResult Configuracion()
-        {
-            return View();
-        }
-
-        // GET: CrearCliente
-        public async Task<IActionResult> CrearCliente()
-        {
-            // Obtener solo los usuarios que tienen el rol de "Asesor"
-            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
-
-            // Pasarlos a la vista para el dropdown
-            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre"); // Usamos tu columna 'Nombre'
-
-            return View();
-        }
-
-        // POST: CrearCliente
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CrearCliente(Cliente cliente)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Add(cliente);
-                await _context.SaveChangesAsync();
-                TempData["Mensaje"] = "Cliente creado y asignado correctamente";
-                TempData["TipoMensaje"] = "success";
-                return RedirectToAction("Usuarios"); // O a una lista de clientes
-            }
-
-            // Si hay error, recargar la lista de asesores
-            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
-            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
-            return View(cliente);
-        }
-
         // POST: Eliminar Usuario
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -176,6 +139,87 @@ namespace ACCOB.Controllers
             }
 
             return RedirectToAction(nameof(Usuarios));
+        }
+
+        // GET: Configuración
+        public IActionResult Configuracion()
+        {
+            return View();
+        }
+
+        // GET: CrearCliente
+        public async Task<IActionResult> CrearCliente()
+        {
+            // Obtener solo los usuarios que tienen el rol de "Asesor"
+            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
+
+            // Pasarlos a la vista para el dropdown
+            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre"); // Usamos tu columna 'Nombre'
+
+            return View();
+        }
+
+        // POST: CrearCliente
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearCliente(Cliente cliente)
+        {
+            if (ModelState.IsValid)
+            {
+                cliente.FechaRegistro = DateTime.UtcNow; // Hora UTC para evitar error de Postgres
+                _context.Add(cliente);
+                await _context.SaveChangesAsync();
+
+                TempData["Mensaje"] = "Cliente creado exitosamente";
+                TempData["TipoMensaje"] = "success";
+                return RedirectToAction("Clientes");
+            }
+
+            // SI HAY ERROR: Debemos recargar los asesores para que el dropdown no falle
+            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
+            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
+
+            return View(cliente);
+        }
+
+        // GET: Lista de clientes
+        public IActionResult Clientes()
+        {
+            // Usamos .Include(c => c.Asesor) para traer los datos del asesor asignado
+            var clientes = _context.Clientes.Include(c => c.Asesor).ToList();
+            return View(clientes);
+        }
+
+        // POST: Eliminar Cliente
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarCliente(int id)
+        {
+            var cliente = await _context.Clientes.FindAsync(id);
+
+            if (cliente == null)
+            {
+                TempData["Mensaje"] = "El cliente no existe o ya fue eliminado.";
+                TempData["TipoMensaje"] = "danger";
+                return RedirectToAction(nameof(Clientes));
+            }
+
+            try
+            {
+                _context.Clientes.Remove(cliente);
+                await _context.SaveChangesAsync();
+
+                TempData["Mensaje"] = $"El cliente {cliente.Nombre} ha sido eliminado correctamente.";
+                TempData["TipoMensaje"] = "success";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar el cliente");
+                TempData["Mensaje"] = "Hubo un error al intentar eliminar el cliente.";
+                TempData["TipoMensaje"] = "danger";
+            }
+
+            return RedirectToAction(nameof(Clientes));
         }
     }
 }
