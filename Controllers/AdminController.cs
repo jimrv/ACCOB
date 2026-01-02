@@ -106,6 +106,79 @@ namespace ACCOB.Controllers
             return View(usuarios);
         }
 
+        // GET: Editar Asesor
+        public async Task<IActionResult> EditarAsesor(string id)
+        {
+            if (id == null) return NotFound();
+
+            var usuario = await _userManager.FindByIdAsync(id);
+            if (usuario == null) return NotFound();
+
+            var model = new EditarAsesorViewModel
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Dni = usuario.Dni,
+                Celular = usuario.Celular
+            };
+
+            return View(model);
+        }
+
+        // POST: Editar Asesor
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarAsesor(EditarAsesorViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByIdAsync(model.Id);
+                if (user == null) return NotFound();
+
+                // VALIDACIÓN: Verificar si el nuevo DNI ya lo tiene otro usuario
+                var usuarioConMismoDni = await _userManager.FindByNameAsync(model.Dni);
+                if (usuarioConMismoDni != null && usuarioConMismoDni.Id != user.Id)
+                {
+                    ModelState.AddModelError("Dni", "Este DNI ya está registrado por otro usuario.");
+                    return View(model);
+                }
+
+                // Actualizar datos básicos
+                user.Nombre = model.Nombre;
+                user.Dni = model.Dni;
+                user.UserName = model.Dni;
+                user.Celular = model.Celular;
+                user.PhoneNumber = model.Celular;
+
+                var result = await _userManager.UpdateAsync(user);
+
+                if (result.Succeeded)
+                {
+                    // Cambio de contraseña opcional
+                    if (!string.IsNullOrEmpty(model.NewPassword))
+                    {
+                        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                        var changePassResult = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+                        if (!changePassResult.Succeeded)
+                        {
+                            foreach (var error in changePassResult.Errors)
+                                ModelState.AddModelError(string.Empty, error.Description);
+                            return View(model);
+                        }
+                    }
+
+                    TempData["Mensaje"] = $"Asesor {model.Nombre} actualizado correctamente.";
+                    TempData["TipoMensaje"] = "success";
+                    return RedirectToAction(nameof(Usuarios));
+                }
+
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return View(model);
+        }
+
         // POST: Eliminar Usuario
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -140,12 +213,6 @@ namespace ACCOB.Controllers
             }
 
             return RedirectToAction(nameof(Usuarios));
-        }
-
-        // GET: Configuración
-        public IActionResult Configuracion()
-        {
-            return View();
         }
 
         // GET: CrearCliente
@@ -184,11 +251,45 @@ namespace ACCOB.Controllers
         }
 
         // GET: Lista de clientes
-        public IActionResult Clientes()
+        public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
         {
-            // Usamos .Include(c => c.Asesor) para traer los datos del asesor asignado
-            var clientes = _context.Clientes.Include(c => c.Asesor).ToList();
-            return View(clientes);
+            // Cargar asesores para el dropdown del filtro
+            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
+            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
+
+            // Consulta base
+            var query = _context.Clientes.Include(c => c.Asesor).AsQueryable();
+
+            // Filtro por Nombre
+            if (!string.IsNullOrEmpty(nombre))
+                query = query.Where(c => c.Nombre.Contains(nombre));
+
+            // Filtro por Estado
+            if (!string.IsNullOrEmpty(estado))
+                query = query.Where(c => c.Estado == estado);
+
+            // Filtro por Asesor
+            if (!string.IsNullOrEmpty(asesorId))
+                query = query.Where(c => c.AsesorId == asesorId);
+
+            // Filtro por Rango de Fechas
+            if (fechaInicio.HasValue)
+                query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
+
+            if (fechaFin.HasValue)
+                query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
+
+            var model = new ClienteListViewModel
+            {
+                Clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync(),
+                Nombre = nombre,
+                Estado = estado,
+                AsesorId = asesorId,
+                FechaInicio = fechaInicio,
+                FechaFin = fechaFin
+            };
+
+            return View(model);
         }
 
         // POST: Eliminar Cliente
