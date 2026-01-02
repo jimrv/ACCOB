@@ -262,21 +262,27 @@ namespace ACCOB.Controllers
             // Consulta base
             var query = _context.Clientes.Include(c => c.Asesor).AsQueryable();
 
-            // Filtro por Dni
-            if (!string.IsNullOrEmpty(dni))
-                query = query.Where(c => c.Dni.Contains(dni));
-
-            // Filtro por Nombre
+            // Filtro por Dni y nombre
             if (!string.IsNullOrEmpty(nombre))
-                query = query.Where(c => c.Nombre.Contains(nombre));
-
+            {
+                query = query.Where(c => c.Nombre.Contains(nombre) || c.Dni.Contains(nombre));
+            }
             // Filtro por Estado
             if (!string.IsNullOrEmpty(estado))
                 query = query.Where(c => c.Estado == estado);
 
             // Filtro por Asesor
             if (!string.IsNullOrEmpty(asesorId))
-                query = query.Where(c => c.AsesorId == asesorId);
+            {
+                if (asesorId == "sin_asignar")
+                {
+                    query = query.Where(c => c.AsesorId == null);
+                }
+                else
+                {
+                    query = query.Where(c => c.AsesorId == asesorId);
+                }
+            }
 
             // Filtro por Rango de Fechas
             if (fechaInicio.HasValue)

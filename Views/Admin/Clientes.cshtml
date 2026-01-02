@@ -36,7 +36,7 @@
         <div class="card-body">
             <form id="filterForm" method="get" asp-action="Clientes" class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label small">Nombre del Cliente</label>
+                    <label class="form-label small">Nombre/ DNI del Cliente</label>
                     <input type="text" name="nombre" value="@Model.Nombre" class="form-control form-control-sm" />
                 </div>
                 <div class="col-md-2">
@@ -49,8 +49,17 @@
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">Asesor</label>
-                    <select name="asesorId" class="form-select form-select-sm" asp-items="ViewBag.Asesores">
+                    <select name="asesorId" class="form-select form-select-sm">
                         <option value="">Todos</option>
+                        <option value="sin_asignar" selected="@(Model.AsesorId == "sin_asignar")">-- Sin Asignar --
+                        </option>
+
+                        @foreach (var item in (SelectList)ViewBag.Asesores)
+                        {
+                            <!option value="@item.Value" @(Model.AsesorId == item.Value ? "selected" : "")>
+                                @item.Text
+                            </!option>
+                        }
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -152,7 +161,7 @@
                                 </td>
                                 <td>
                                     @* Select individual (mantiene el onchange para cambios rápidos) *@
-                                            <select class="form-select form-select-sm"
+                                    <select class="form-select form-select-sm"
                                         onchange="asignarIndividual(@cliente.Id, this.value)">
                                         <option value="">-- Sin asignar --</option>
                                         @foreach (var asesor in (SelectList)ViewBag.Asesores)
