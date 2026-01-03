@@ -5,60 +5,97 @@
 }
 
 <div class="container-fluid mt-4">
-    <div class="card shadow-sm">
-        <div class="card-header bg-white py-3">
-            <h4 class="mb-0 text-primary"><i class="bi bi-people-fill"></i> Mis Clientes Asignados</h4>
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h4 class="mb-0 text-primary fw-bold"><i class="bi bi-people-fill"></i> Mis Clientes Asignados</h4>
         </div>
         <div class="card-body">
-            <form method="get" asp-action="Listado" class="row g-3 mb-4">
-                <div class="col-md-6">
-                    <label class="form-label small fw-bold">Buscar</label>
-                    <input type="text" name="buscar" value="@ViewBag.BusquedaActual" class="form-control" placeholder="Dni, nombre o telefono...">
+            @* --- FORMULARIO DE FILTROS --- *@
+            <form method="get" asp-action="Listado" class="row g-3 mb-4 p-3 bg-light rounded-3 border">
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-secondary">Buscar</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.BusquedaActual" class="form-control" placeholder="DNI, nombre o teléfono...">
+                    </div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small fw-bold">Estado</label>
+                    <label class="form-label small fw-bold text-secondary">Filtrar por Estado</label>
                     <select name="estado" class="form-select">
                         <option value="">Todos los estados</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Atendido">Atendido</option>
+                        @* Actualizamos las opciones para que coincidan con los nuevos estados *@
+                        <option value="Pendiente" selected="@(ViewBag.EstadoActual == "Pendiente")">Pendiente</option>
+                        <option value="En Gestión" selected="@(ViewBag.EstadoActual == "En Gestión")">En Gestión</option>
+                        <option value="Cerrado" selected="@(ViewBag.EstadoActual == "Cerrado")">Cerrado</option>
                     </select>
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-filter"></i> Filtrar
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm">
+                        <i class="bi bi-filter"></i> Aplicar Filtros
                     </button>
                 </div>
             </form>
 
+            @* --- TABLA DE RESULTADOS --- *@
             <div class="table-responsive">
-                <table class="table table-hover border">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle border">
+                    <thead class="table-light text-secondary small text-uppercase">
                         <tr>
-                            <th>DNI</th>
-                            <th>Nombre</th>
-                            <th>Contacto</th>
-                            <th>Registro</th>
+                            <th class="ps-3">DNI</th>
+                            <th>Nombre Completo</th>
+                            <th>Teléfono</th>
+                            <th>Fecha Registro</th>
                             <th>Estado</th>
-                            <th class="text-end">Acciones</th>
+                            <th class="text-end pe-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model)
+                        @if (Model.Any())
+                        {
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="ps-3"><strong>@item.Dni</strong></td>
+                                    <td>@item.Nombre</td>
+                                    <td>
+                                        <i class="bi bi-telephone text-muted me-1"></i> @item.Telefono
+                                    </td>
+                                    <td>@item.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @* Lógica de colores diferenciada para los 3 estados *@
+                                        @if (item.Estado == "Cerrado")
+                                        {
+                                            <span class="badge rounded-pill bg-success px-3">
+                                                <i class="bi bi-check-circle me-1"></i> @item.Estado
+                                            </span>
+                                        }
+                                        else if (item.Estado == "En Gestión")
+                                        {
+                                            <span class="badge rounded-pill bg-info text-dark px-3">
+                                                <i class="bi bi-gears me-1"></i> @item.Estado
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge rounded-pill bg-warning text-dark px-3">
+                                                <i class="bi bi-clock me-1"></i> @item.Estado
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-dark shadow-sm">
+                                            <i class="bi bi-telephone-outbound me-1"></i> Gestionar
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
                         {
                             <tr>
-                                <td><strong>@item.Dni</strong></td>
-                                <td>@item.Nombre</td>
-                                <td>@item.Telefono</td>
-                                <td>@item.FechaRegistro.ToShortDateString()</td>
-                                <td>
-                                    <span class="badge @(item.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
-                                        @item.Estado
-                                    </span>
-                                </td>
-                                <td class="text-end">
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-eye"></i> Ver Detalle
-                                    </a>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-info-circle d-block fs-2 mb-2"></i>
+                                    No se encontraron clientes con los filtros aplicados.
                                 </td>
                             </tr>
                         }

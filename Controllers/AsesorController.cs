@@ -21,8 +21,8 @@ namespace ACCOB.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
 
         public AsesorController(
-            ILogger<AsesorController> logger, 
-            ApplicationDbContext context, 
+            ILogger<AsesorController> logger,
+            ApplicationDbContext context,
             UserManager<ApplicationUser> userManager)
         {
             _logger = logger;
@@ -35,16 +35,32 @@ namespace ACCOB.Controllers
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
-            
+            var hoy = DateTime.UtcNow.Date;
+            var mañana = hoy.AddDays(1);
+
             var query = _context.Clientes.Where(c => c.AsesorId == userId);
 
             var model = new AsesorDashboardViewModel
             {
                 TotalClientes = await query.CountAsync(),
                 ClientesPendientes = await query.CountAsync(c => c.Estado == "Pendiente"),
-                ClientesAtendidos = await query.CountAsync(c => c.Estado == "Atendido"),
-                // En el Dashboard podemos mostrar los últimos 5 registrados
-                Clientes = await query.OrderByDescending(c => c.FechaRegistro).Take(5).ToListAsync()
+                ClientesEnGestion = await query.CountAsync(c => c.Estado == "En Gestión"), // Nuevo estado
+                ClientesCerrados = await query.CountAsync(c => c.Estado == "Cerrado"),     // Nuevo estado
+
+                // Últimos clientes asignados
+                Clientes = await query.OrderByDescending(c => c.FechaRegistro).Take(5).ToListAsync(),
+
+                // Notificación: Clientes asignados hoy que siguen en "Pendiente"
+                NuevasAsignacionesHoy = await query.CountAsync(c => c.FechaRegistro >= hoy && c.Estado == "Pendiente"),
+
+                // Notificación: Llamadas programadas para hoy
+                RecordatoriosHoy = await _context.RegistroLlamadas
+                    .Include(r => r.Cliente)
+                    .Where(r => r.AsesorId == userId &&
+                                r.ProximaLlamada >= hoy &&
+                                r.ProximaLlamada < mañana)
+                    .OrderBy(r => r.ProximaLlamada)
+                    .ToListAsync()
             };
 
             return View(model);
@@ -59,7 +75,7 @@ namespace ACCOB.Controllers
 
             if (!string.IsNullOrEmpty(buscar))
             {
-                query = query.Where(c => c.Dni.Contains(buscar) ||c.Nombre.Contains(buscar) || c.Telefono.Contains(buscar));
+                query = query.Where(c => c.Dni.Contains(buscar) || c.Nombre.Contains(buscar) || c.Telefono.Contains(buscar));
             }
 
             if (!string.IsNullOrEmpty(estado))
@@ -83,11 +99,58 @@ namespace ACCOB.Controllers
 
             var userId = _userManager.GetUserId(User);
             var cliente = await _context.Clientes
+                .Include(c => c.Llamadas)
                 .FirstOrDefaultAsync(m => m.Id == id && m.AsesorId == userId);
+
 
             if (cliente == null) return NotFound();
 
             return View(cliente);
+        }
+
+        // Registrar una llamada para un cliente específico
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegistrarLlamada(int clienteId, string resultado, string observaciones, DateTime? proximaLlamada)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            // FIX: Convertir la fecha a UTC si el usuario ingresó una
+            DateTime? fechaRecordatorio = null;
+            if (proximaLlamada.HasValue)
+            {
+                fechaRecordatorio = DateTime.SpecifyKind(proximaLlamada.Value, DateTimeKind.Utc);
+            }
+
+            var nuevaLlamada = new RegistroLlamada
+            {
+                ClienteId = clienteId,
+                AsesorId = userId,
+                Resultado = resultado,
+                Observaciones = observaciones,
+                FechaLlamada = DateTime.UtcNow,
+                ProximaLlamada = fechaRecordatorio // Usamos la fecha corregida
+            };
+
+            try
+            {
+                _context.RegistroLlamadas.Add(nuevaLlamada);
+
+                // CAMBIO: Si el cliente está Pendiente, ahora pasa a "En Gestión"
+                var cliente = await _context.Clientes.FindAsync(clienteId);
+                if (cliente != null && cliente.Estado == "Pendiente")
+                {
+                    cliente.Estado = "En Gestión";
+                    _context.Update(cliente);
+                }
+
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = "Gestión registrada.";
+                TempData["TipoMensaje"] = "success";
+            }
+            catch (Exception ex) { /* ... log error ... */ }
+
+            return RedirectToAction(nameof(Details), new { id = clienteId });
         }
 
         // 4. ACCIÓN: Cambiar estado a atendido (desde la vista de detalle)
@@ -101,11 +164,11 @@ namespace ACCOB.Controllers
 
             if (cliente != null)
             {
-                cliente.Estado = "Atendido";
+                cliente.Estado = "Cerrado";
                 _context.Update(cliente);
                 await _context.SaveChangesAsync();
 
-                TempData["Mensaje"] = "Cliente marcado como finalizado con éxito.";
+                TempData["Mensaje"] = "Expediente cerrado con éxito.";
                 TempData["TipoMensaje"] = "success";
             }
             else

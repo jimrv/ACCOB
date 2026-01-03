@@ -1,19 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using ACCOB.Models;
+using System.Collections.Generic;
 
 namespace ACCOB.ViewModels
 {
     public class AsesorDashboardViewModel
     {
-        public string Busqueda { get; set; } = string.Empty;
-        
         public int TotalClientes { get; set; }
         public int ClientesPendientes { get; set; }
-        public int ClientesAtendidos { get; set; }
-
-        public List<Cliente> Clientes { get; set; } = new List<Cliente>();
+        public int ClientesEnGestion { get; set; } 
+        public int ClientesCerrados { get; set; }  
+        
+        public List<Cliente> Clientes { get; set; }
+        public int NuevasAsignacionesHoy { get; set; }
+        public List<RegistroLlamada> RecordatoriosHoy { get; set; } = new List<RegistroLlamada>();
     }
 }

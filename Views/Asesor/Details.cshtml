@@ -1,38 +1,72 @@
 @model ACCOB.Models.Cliente
+@{
+    ViewData["Title"] = "Expediente del Cliente";
+    var zonaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+}
 
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow border-0">
+<div class="container-fluid mt-4">
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-@TempData["TipoMensaje"] alert-dismissible fade show shadow-sm" role="alert">
+            <i
+                class="bi @(TempData["TipoMensaje"]?.ToString() == "success" ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+            @TempData["Mensaje"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        @* COLUMNA IZQUIERDA: INFORMACIÓN FIJA DEL CLIENTE *@
+        <div class="col-md-4">
+            <div class="card shadow border-0 sticky-top" style="top: 20px;">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Expediente del Cliente</h5>
-                    <a asp-action="Listado" class="btn btn-sm btn-light">Volver</a>
+                    <h5 class="mb-0">Datos del Cliente</h5>
+                    <a asp-action="Listado" class="btn btn-sm btn-outline-light">Volver</a>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-4 text-center">
-                        <div class="col-12">
-                            <i class="bi bi-person-circle display-4 text-secondary"></i>
-                            <h3 class="mt-2">@Model.Nombre</h3>
-                            <span class="badge p-2 @(Model.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
-                                Estado: @Model.Estado
-                            </span>
-                        </div>
+                    <div class="text-center mb-4">
+                        <i class="bi bi-person-badge display-4 text-primary"></i>
+                        <h3 class="mt-2 h4">@Model.Nombre</h3>
+                        <span class="badge p-2 @(Model.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
+                            Estado: @Model.Estado
+                        </span>
                     </div>
 
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item"><strong>Email:</strong> @Model.Email</li>
-                        <li class="list-group-item"><strong>Teléfono:</strong> @(Model.Telefono ?? "No asignado")</li>
-                        <li class="list-group-item"><strong>Fecha de Asignación:</strong> @Model.FechaRegistro.ToString("f")</li>
-                    </ul>
+                    <div class="border-top pt-3">
+                        <dl class="row small mb-0">
+                            <dt class="col-sm-4 text-muted">DNI:</dt>
+                            <dd class="col-sm-8 fw-bold">@Model.Dni</dd>
 
-                    @if (Model.Estado != "Atendido")
+                            <dt class="col-sm-4 text-muted">Email:</dt>
+                            <dd class="col-sm-8 text-truncate">@Model.Email</dd>
+
+                            <dt class="col-sm-4 text-muted">Teléfono:</dt>
+                            <dd class="col-sm-8">@Model.Telefono</dd>
+
+                            <dt class="col-sm-4 text-muted">Dirección:</dt>
+                            <dd class="col-sm-8">@Model.Direccion</dd>
+
+                            <dt class="col-sm-4 text-muted">Registro:</dt>
+                            <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
+                        </dl>
+                    </div>
+
+                    @* En la sección del Badge de Estado *@
+                    <span
+                        class="badge p-2 @(Model.Estado == "Cerrado" ? "bg-success" : (Model.Estado == "En Gestión" ? "bg-info text-dark" : "bg-warning text-dark"))">
+                        Estado: @Model.Estado
+                    </span>
+
+                    @* En la lógica del botón de finalizar *@
+                    @if (Model.Estado != "Cerrado")
                     {
-                        <div class="mt-4 p-3 bg-light rounded text-center">
-                            <p class="text-muted">¿Has terminado la gestión con este cliente?</p>
-                            <form asp-action="CompletarCliente" method="post">
+                        <hr>
+                        <div class="d-grid gap-2">
+                            <form asp-action="CompletarCliente" method="post"
+                                onsubmit="return confirm('¿Deseas marcar este expediente como CERRADO?');">
                                 <input type="hidden" name="id" value="@Model.Id" />
-                                <button type="submit" class="btn btn-success btn-lg px-5">
-                                    <i class="bi bi-check2-circle"></i> Marcar como Finalizado
+                                <button type="submit" class="btn btn-success btn-sm w-100 shadow-sm">
+                                    <i class="bi bi-lock-fill"></i> Marcar como Cerrado
                                 </button>
                             </form>
                         </div>
@@ -40,5 +74,134 @@
                 </div>
             </div>
         </div>
+
+        @* COLUMNA DERECHA: HISTORIAL ARRIBA Y REGISTRO ABAJO *@
+        <div class="col-md-8">
+
+            @* 1. HISTORIAL DE GESTIONES (ARRIBA) *@
+            <div class="card shadow border-0 mb-4">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 h6"><i class="bi bi-clock-history me-2"></i>Historial de Llamadas</h5>
+                    <span class="badge bg-white text-dark">@Model.Llamadas.Count gestiones</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr class="small text-muted">
+                                    <th class="ps-3">Fecha</th>
+                                    <th>Resultado</th>
+                                    <th>Detalles / Observaciones</th>
+                                    <th class="text-nowrap pe-3">Recordatorio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Llamadas != null && Model.Llamadas.Any())
+                                {
+                                    @foreach (var llamada in Model.Llamadas.OrderByDescending(l => l.FechaLlamada))
+                                    {
+                                        <tr>
+                                            <td class="small ps-3 text-nowrap">
+                                                @TimeZoneInfo.ConvertTimeFromUtc(llamada.FechaLlamada,
+                                                zonaPeru).ToString("dd/MM/yy HH:mm")
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge rounded-pill border text-dark bg-light">@llamada.Resultado</span>
+                                    </td>
+                                    <td class="small text-break">@llamada.Observaciones</td>
+                                    <td class="pe-3">
+                                        @if (llamada.ProximaLlamada.HasValue)
+                                                {
+                                                    <div class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                        <i class="bi bi-calendar-check me-1"></i>
+                                                        @llamada.ProximaLlamada.Value.ToString("dd/MM HH:mm")
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-5">
+                                            <i class="bi bi-chat-dots text-muted fs-1 d-block mb-2"></i>
+                                            <p class="text-muted mb-0">Sin historial registrado para este cliente.</p>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            @* 2. FORMULARIO DE REGISTRO (ABAJO) *@
+            <div class="card shadow border-0 border-top border-primary border-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-primary h6"><i class="bi bi-pencil-square me-2"></i>Nueva Gestión de Llamada
+                    </h5>
+                </div>
+                <div class="card-body bg-light-subtle">
+                    <form asp-action="RegistrarLlamada" method="post" id="formLlamada">
+                        <input type="hidden" name="clienteId" value="@Model.Id" />
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Resultado de la Llamada</label>
+                                <select name="resultado" class="form-select" required>
+                                    <option value="" disabled selected>Seleccione resultado...</option>
+                                    <option value="Interesado">Interesado</option>
+                                    <option value="No contesta">No contesta</option>
+                                    <option value="Llamar luego">Llamar luego</option>
+                                    <option value="Venta cerrada">Venta cerrada</option>
+                                    <option value="No interesado">No interesado</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-success">
+                                    <i class="bi bi-calendar-event me-1"></i>Programar Próxima Llamada
+                                </label>
+                                <input type="datetime-local" name="proximaLlamada" class="form-control" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Observaciones Detalladas</label>
+                                <textarea name="observaciones" class="form-control" rows="4" required
+                                    placeholder="Describa los puntos clave tratados en la llamada..."></textarea>
+                            </div>
+
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary px-5 shadow-sm">
+                                    <i class="bi bi-save me-2"></i>Registrar Gestión
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Efecto visual para resaltar el campo de próxima llamada si el resultado es "Interesado"
+        document.querySelector('select[name="resultado"]').addEventListener('change', function () {
+            const inputProxima = document.querySelector('input[name="proximaLlamada"]');
+            if (this.value === "Interesado" || this.value === "Llamar luego") {
+                inputProxima.classList.add('is-valid');
+                inputProxima.focus();
+            } else {
+                inputProxima.classList.remove('is-valid');
+            }
+        });
+    </script>
+}

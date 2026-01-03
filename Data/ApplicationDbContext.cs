@@ -11,4 +11,5 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
     }
     public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<RegistroLlamada> RegistroLlamadas { get; set; }
 }

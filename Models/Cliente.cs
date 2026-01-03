@@ -36,5 +36,8 @@ namespace ACCOB.Models
 
         [ForeignKey("AsesorId")]
         public virtual ApplicationUser? Asesor { get; set; }
+
+        // Relación: Un cliente puede tener muchos registros de llamadas
+        public virtual ICollection<RegistroLlamada> Llamadas { get; set; } = new List<RegistroLlamada>();
     }
 }
