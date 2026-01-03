@@ -264,7 +264,11 @@ namespace ACCOB.Controllers
             ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
 
             // Consulta base
-            var query = _context.Clientes.Include(c => c.Asesor).AsQueryable();
+            var query = _context.Clientes
+                .Include(c => c.Asesor)
+                .Include(c => c.Llamadas)
+                    .ThenInclude(l => l.Asesor)
+                .AsQueryable();
 
             // Filtro por Dni y nombre
             if (!string.IsNullOrEmpty(nombre))

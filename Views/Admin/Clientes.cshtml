@@ -1,4 +1,4 @@
-@model ACCOB.ViewModels.ClienteListViewModel
+@model ACCOB.ViewModels.ClienteListViewModel 
 @{
     ViewData["Title"] = "Gestión de Clientes";
     var zonaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
@@ -127,6 +127,7 @@
                                 <th>Dirección</th>
                                 <th>Estado</th>
                                 <th>Asesor Asignado</th>
+                                <th>Gestión</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -173,6 +174,11 @@
                                                 }
                                             </select>
                                         </td>
+                                        <td><button type="button" class="btn btn-sm btn-outline-info"
+                                                onclick="verHistorial(@cliente.Id)" title="Ver Historial">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
                                         <td class="text-center">
                                             <div class="btn-group">
                                                 <a href="#" class="btn btn-sm btn-outline-primary" title="Editar">
@@ -218,6 +224,19 @@
         <div class="alert alert-info py-2">
             <i class="bi bi-info-circle"></i>
             <strong>Total encontrados:</strong> @(Model.Clientes?.Count() ?? 0)
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-clock-history"></i> Historial de Gestiones</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="contenidoHistorial">
+            </div>
         </div>
     </div>
 </div>
@@ -294,6 +313,55 @@
                 document.getElementById('deleteClienteId').value = id;
                 document.getElementById('formEliminarCliente').submit();
             }
+        }
+
+        function verHistorial(clienteId) {
+            // 1. Mapeamos incluyendo el nombre del Asesor de la llamada
+            const clientesData = @Json.Serialize(Model.Clientes.Select(c => new {
+                id = c.Id,
+                nombre = c.Nombre,
+                llamadas = c.Llamadas.Select(ll => new {
+                    fechaLlamada = ll.FechaLlamada,
+                    resultado = ll.Resultado,
+                    observaciones = ll.Observaciones,
+                    nombreAsesor = ll.Asesor != null ? ll.Asesor.Nombre : "Sistema" // <--- Mapeo del asesor
+                }).ToList()
+            }));
+
+            const cliente = clientesData.find(c => c.id === clienteId);
+            
+            let html = `<h6>Cliente: <strong>${cliente.nombre}</strong></h6><hr>`;
+            
+            if (cliente.llamadas && cliente.llamadas.length > 0) {
+                html += `<div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead class="table-light">
+                                    <tr class="small">
+                                        <th>Fecha</th>
+                                        <th>Asesor</th> <th>Resultado</th>
+                                        <th>Observaciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                
+                const llamadasOrdenadas = cliente.llamadas.sort((a, b) => new Date(b.fechaLlamada) - new Date(a.fechaLlamada));
+                
+                llamadasOrdenadas.forEach(ll => {
+                    const fecha = new Date(ll.fechaLlamada).toLocaleString('es-PE');
+                    html += `<tr class="small">
+                                <td class="text-nowrap">${fecha}</td>
+                                <td class="fw-bold text-primary">${ll.nombreAsesor}</td> <td><span class="badge bg-light text-dark border">${ll.resultado}</span></td>
+                                <td>${ll.observaciones || '-'}</td>
+                            </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            } else {
+                html += `<div class="text-center py-4 text-muted">No hay gestiones registradas.</div>`;
+            }
+            
+            document.getElementById('contenidoHistorial').innerHTML = html;
+            var myModal = new bootstrap.Modal(document.getElementById('modalHistorial'));
+            myModal.show();
         }
     </script>
 }
