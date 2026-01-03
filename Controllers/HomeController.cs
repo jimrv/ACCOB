@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ACCOB.Models;
 
@@ -22,11 +23,6 @@ public class HomeController : Controller
         }
 
         // Si no está autenticado o no es Admin, mostrar Home
-        return View();
-    }
-
-    public IActionResult Privacy()
-    {
         return View();
     }
 

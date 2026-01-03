@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using ACCOB.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,8 +38,20 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
 
-builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+
+builder.Services.AddControllersWithViews(options =>
+{
+    // Crear una política que exija autenticación
+    var policy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
+    // Aplicar la política a todos los controladores de forma global
+    options.Filters.Add(new AuthorizeFilter(policy));
+});
+
+
 builder.Services.AddSignalR();
 
 var app = builder.Build();
@@ -115,5 +129,18 @@ using (var scope = app.Services.CreateScope())
     }
     context.SaveChanges();
 }
+
+app.MapGet("/", context =>
+{
+    if (!context.User.Identity.IsAuthenticated)
+    {
+        context.Response.Redirect("/Identity/Account/Login");
+    }
+    else
+    {
+        context.Response.Redirect("/Home/Index");
+    }
+    return Task.CompletedTask;
+});
 
 app.Run();
