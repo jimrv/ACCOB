@@ -457,7 +457,11 @@ namespace ACCOB.Controllers
         // Generar Reportes
         public async Task<IActionResult> ExportarClientes(string? dni, string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
         {
-            var query = _context.Clientes.Include(c => c.Asesor).AsQueryable();
+            var query = _context.Clientes
+                .Include(c => c.Asesor)
+                .Include(c => c.Llamadas)
+                    .ThenInclude(l => l.Asesor)
+                .AsQueryable();
 
             // Aplicamos los mismos filtros que en la vista
             if (!string.IsNullOrEmpty(dni))
@@ -490,11 +494,13 @@ namespace ACCOB.Controllers
                 worksheet.Cell(currentRow, 1).Value = "Fecha Registro";
                 worksheet.Cell(currentRow, 2).Value = "DNI";
                 worksheet.Cell(currentRow, 3).Value = "Nombre Cliente";
-                worksheet.Cell(currentRow, 4).Value = "Email";
-                worksheet.Cell(currentRow, 5).Value = "Teléfono";
-                worksheet.Cell(currentRow, 6).Value = "Dirección";
-                worksheet.Cell(currentRow, 7).Value = "Estado";
+                worksheet.Cell(currentRow, 4).Value = "Telefono Cliente";
+                worksheet.Cell(currentRow, 5).Value = "Estado Actual";
+                worksheet.Cell(currentRow, 6).Value = "Email Cliente";
+                worksheet.Cell(currentRow, 7).Value = "Direccion Cliente";
                 worksheet.Cell(currentRow, 8).Value = "Asesor Asignado";
+                worksheet.Cell(currentRow, 9).Value = "Último Resultado";
+                worksheet.Cell(currentRow, 10).Value = "Asesor Última Gestión";
 
                 // Estilo de cabecera
                 var headerRow = worksheet.Row(1);
@@ -507,14 +513,22 @@ namespace ACCOB.Controllers
                 foreach (var cliente in clientes)
                 {
                     currentRow++;
+
+                    // Obtener la última llamada registrada
+                    var ultimaLlamada = cliente.Llamadas
+                        .OrderByDescending(l => l.FechaLlamada)
+                        .FirstOrDefault();
+
                     worksheet.Cell(currentRow, 1).Value = TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro, zonaPeru).ToString("dd/MM/yyyy HH:mm");
                     worksheet.Cell(currentRow, 2).Value = cliente.Dni;
                     worksheet.Cell(currentRow, 3).Value = cliente.Nombre;
-                    worksheet.Cell(currentRow, 4).Value = cliente.Email;
-                    worksheet.Cell(currentRow, 5).Value = cliente.Telefono;
-                    worksheet.Cell(currentRow, 6).Value = cliente.Direccion;
-                    worksheet.Cell(currentRow, 7).Value = cliente.Estado;
+                    worksheet.Cell(currentRow, 4).Value = cliente.Telefono;
+                    worksheet.Cell(currentRow, 5).Value = cliente.Estado;
+                    worksheet.Cell(currentRow, 6).Value = cliente.Email;
+                    worksheet.Cell(currentRow, 7).Value = cliente.Direccion;
                     worksheet.Cell(currentRow, 8).Value = cliente.Asesor?.Nombre ?? "Sin asignar";
+                    worksheet.Cell(currentRow, 9).Value = ultimaLlamada?.Resultado ?? "Sin gestiones";
+                    worksheet.Cell(currentRow, 10).Value = ultimaLlamada?.Asesor?.Nombre ?? "-";
                 }
 
                 worksheet.Columns().AdjustToContents(); // Ajustar ancho de columnas automáticamente
