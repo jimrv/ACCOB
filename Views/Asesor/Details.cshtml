@@ -27,7 +27,8 @@
                     <div class="text-center mb-4">
                         <i class="bi bi-person-badge display-4 text-primary"></i>
                         <h3 class="mt-2 h4">@Model.Nombre</h3>
-                        <span class="badge p-2 @(Model.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
+                        <span
+                            class="badge p-2 @(Model.Estado == "Cerrado" ? "bg-success" : (Model.Estado == "En Gestión" ? "bg-info text-dark" : "bg-warning text-dark"))">
                             Estado: @Model.Estado
                         </span>
                     </div>
@@ -36,28 +37,17 @@
                         <dl class="row small mb-0">
                             <dt class="col-sm-4 text-muted">DNI:</dt>
                             <dd class="col-sm-8 fw-bold">@Model.Dni</dd>
-
                             <dt class="col-sm-4 text-muted">Email:</dt>
                             <dd class="col-sm-8 text-truncate">@Model.Email</dd>
-
                             <dt class="col-sm-4 text-muted">Teléfono:</dt>
                             <dd class="col-sm-8">@Model.Telefono</dd>
-
                             <dt class="col-sm-4 text-muted">Dirección:</dt>
                             <dd class="col-sm-8">@Model.Direccion</dd>
-
                             <dt class="col-sm-4 text-muted">Registro:</dt>
                             <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
                         </dl>
                     </div>
 
-                    @* En la sección del Badge de Estado *@
-                    <span
-                        class="badge p-2 @(Model.Estado == "Cerrado" ? "bg-success" : (Model.Estado == "En Gestión" ? "bg-info text-dark" : "bg-warning text-dark"))">
-                        Estado: @Model.Estado
-                    </span>
-
-                    @* En la lógica del botón de finalizar *@
                     @if (Model.Estado != "Cerrado")
                     {
                         <hr>
@@ -75,17 +65,17 @@
             </div>
         </div>
 
-        @* COLUMNA DERECHA: HISTORIAL ARRIBA Y REGISTRO ABAJO *@
+        @* COLUMNA DERECHA: HISTORIAL Y REGISTRO *@
         <div class="col-md-8">
 
-            @* 1. HISTORIAL DE GESTIONES (ARRIBA) *@
+            @* 1. HISTORIAL DE GESTIONES *@
             <div class="card shadow border-0 mb-4">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 h6"><i class="bi bi-clock-history me-2"></i>Historial de Llamadas</h5>
                     <span class="badge bg-white text-dark">@Model.Llamadas.Count gestiones</span>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light sticky-top">
                                 <tr class="small text-muted">
@@ -131,7 +121,7 @@
                                     <tr>
                                         <td colspan="4" class="text-center py-5">
                                             <i class="bi bi-chat-dots text-muted fs-1 d-block mb-2"></i>
-                                            <p class="text-muted mb-0">Sin historial registrado para este cliente.</p>
+                                            <p class="text-muted mb-0 small">Sin historial registrado.</p>
                                         </td>
                                     </tr>
                                 }
@@ -141,7 +131,7 @@
                 </div>
             </div>
 
-            @* 2. FORMULARIO DE REGISTRO (ABAJO) *@
+            @* 2. FORMULARIO DE REGISTRO *@
             <div class="card shadow border-0 border-top border-primary border-4">
                 <div class="card-header bg-white py-3">
                     <h5 class="mb-0 text-primary h6"><i class="bi bi-pencil-square me-2"></i>Nueva Gestión de Llamada
@@ -154,13 +144,12 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Resultado de la Llamada</label>
-                                <select name="resultado" class="form-select" required>
+                                <select id="selectResultado" name="resultado" class="form-select" required>
                                     <option value="" disabled selected>Seleccione resultado...</option>
-                                    <option value="Interesado">Interesado</option>
-                                    <option value="No contesta">No contesta</option>
-                                    <option value="Llamar luego">Llamar luego</option>
-                                    <option value="Venta cerrada">Venta cerrada</option>
-                                    <option value="No interesado">No interesado</option>
+                                    <option value="No Contesta">No Contesta</option>
+                                    <option value="Buzon de Voz">Buzon de Voz</option>
+                                    <option value="Llamar Luego">Llamar Luego</option>
+                                    <option value="Venta Cerrada">Venta Cerrada</option>
                                 </select>
                             </div>
 
@@ -171,10 +160,51 @@
                                 <input type="datetime-local" name="proximaLlamada" class="form-control" />
                             </div>
 
+                            @* --- SECCIÓN DINÁMICA PLAN WIN (Aparece solo en Venta Cerrada) --- *@
+                            <div id="seccionPlanWin" class="col-12" style="display: none;">
+                                <div class="card border-success bg-success-subtle mb-2 shadow-sm">
+                                    <div class="card-body py-3">
+                                        <h6 class="text-success fw-bold mb-3 small text-uppercase">
+                                            <i class="bi bi-cart-check-fill me-1"></i> Información de Venta
+                                        </h6>
+                                        <div class="row g-2">
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Zona</label>
+                                                <select id="selectZona" name="zonaId"
+                                                    class="form-select form-select-sm">
+                                                    <option value="">Seleccione Zona...</option>
+                                                    @if (ViewBag.Zonas != null)
+                                                    {
+                                                        foreach (var zona in (List<ACCOB.Models.Zona>)ViewBag.Zonas)
+                                                        {
+                                                            <option value="@zona.Id">@zona.Nombre</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Plan</label>
+                                                <select id="selectPlan" name="planWinId"
+                                                    class="form-select form-select-sm" disabled>
+                                                    <option value="">Primero elija zona...</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-bold">Velocidad / Tarifa</label>
+                                                <select id="selectTarifa" name="tarifaId"
+                                                    class="form-select form-select-sm" disabled>
+                                                    <option value="">Primero elija plan...</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-12">
                                 <label class="form-label small fw-bold">Observaciones Detalladas</label>
-                                <textarea name="observaciones" class="form-control" rows="4" required
-                                    placeholder="Describa los puntos clave tratados en la llamada..."></textarea>
+                                <textarea name="observaciones" class="form-control" rows="3" required
+                                    placeholder="Describa los puntos clave tratados..."></textarea>
                             </div>
 
                             <div class="col-12 text-end">
@@ -193,15 +223,61 @@
 
 @section Scripts {
     <script>
-        // Efecto visual para resaltar el campo de próxima llamada si el resultado es "Interesado"
-        document.querySelector('select[name="resultado"]').addEventListener('change', function () {
-            const inputProxima = document.querySelector('input[name="proximaLlamada"]');
-            if (this.value === "Interesado" || this.value === "Llamar luego") {
-                inputProxima.classList.add('is-valid');
-                inputProxima.focus();
-            } else {
-                inputProxima.classList.remove('is-valid');
-            }
+        $(document).ready(function () {
+            // 1. Mostrar/Ocultar sección de Plan Win según el resultado
+            $('#selectResultado').on('change', function () {
+                if ($(this).val() === "Venta Cerrada") {
+                    $('#seccionPlanWin').slideDown();
+                    // Opcional: hacer campos obligatorios
+                    $('#selectZona, #selectPlan, #selectTarifa').prop('required', true);
+                } else {
+                    $('#seccionPlanWin').slideUp();
+                    $('#selectZona, #selectPlan, #selectTarifa').prop('required', false);
+                }
+            });
+
+            // 2. Cargar Planes por Zona (AJAX)
+            $('#selectZona').change(function () {
+                var zonaId = $(this).val();
+                var $plan = $('#selectPlan');
+                var $tarifa = $('#selectTarifa');
+
+                $plan.empty().append('<option>Cargando planes...</option>').prop('disabled', true);
+                $tarifa.empty().append('<option>Primero elija plan...</option>').prop('disabled', true);
+
+                if (zonaId) {
+                    $.getJSON('@Url.Action("GetPlanesPorZona", "Asesor")', { zonaId: zonaId }, function (data) {
+                        $plan.empty().append('<option value="">Seleccione Plan</option>');
+                        $.each(data, function (i, item) {
+                            $plan.append($('<option>', { value: item.id, text: item.nombre }));
+                        });
+                        $plan.prop('disabled', false);
+                    }).fail(function () {
+                        $plan.empty().append('<option>Error al cargar</option>');
+                    });
+                }
+            });
+
+            // 3. Cargar Tarifas por Plan (AJAX)
+            $('#selectPlan').change(function () {
+                var planId = $(this).val();
+                var $tarifa = $('#selectTarifa');
+
+                $tarifa.empty().append('<option>Cargando tarifas...</option>').prop('disabled', true);
+
+                if (planId) {
+                    $.getJSON('@Url.Action("GetTarifasPorPlan", "Asesor")', { planId: planId }, function (data) {
+                        $tarifa.empty().append('<option value="">Seleccione Velocidad/Precio</option>');
+                        $.each(data, function (i, item) {
+                            var label = item.velocidad + " - S/ " + item.precio + " (" + item.descuento + ")";
+                            $tarifa.append($('<option>', { value: item.id, text: label }));
+                        });
+                        $tarifa.prop('disabled', false);
+                    }).fail(function () {
+                        $tarifa.empty().append('<option>Error al cargar</option>');
+                    });
+                }
+            });
         });
     </script>
 }

@@ -105,17 +105,47 @@ namespace ACCOB.Controllers
 
             if (cliente == null) return NotFound();
 
+            // Cargamos las zonas para el primer Select
+            ViewBag.Zonas = await _context.Zonas.ToListAsync();
+
             return View(cliente);
+        }
+
+        // Obtiene los planes filtrados por la zona seleccionada
+        [HttpGet]
+        public async Task<JsonResult> GetPlanesPorZona(int zonaId)
+        {
+            var planes = await _context.PlanesWin
+                .Where(p => p.ZonaId == zonaId)
+                .Select(p => new { id = p.Id, nombre = p.Nombre })
+                .ToListAsync();
+            return Json(planes);
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> GetTarifasPorPlan(int planId)
+        {
+            var tarifas = await _context.TarifasPlan
+                .Where(t => t.PlanWinId == planId)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    velocidad = t.Velocidad,
+                    precio = t.PrecioPromocional,
+                    descuento = t.DescripcionDescuento
+                })
+                .ToListAsync();
+            return Json(tarifas);
         }
 
         // Registrar una llamada para un cliente específico
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RegistrarLlamada(int clienteId, string resultado, string observaciones, DateTime? proximaLlamada)
+        public async Task<IActionResult> RegistrarLlamada(int clienteId, string resultado, string observaciones, DateTime? proximaLlamada, int? tarifaId)
         {
             var userId = _userManager.GetUserId(User);
 
-            // FIX: Convertir la fecha a UTC si el usuario ingresó una
+            // FIX: Convertir la fecha a UTC
             DateTime? fechaRecordatorio = null;
             if (proximaLlamada.HasValue)
             {
@@ -129,31 +159,66 @@ namespace ACCOB.Controllers
                 Resultado = resultado,
                 Observaciones = observaciones,
                 FechaLlamada = DateTime.UtcNow,
-                ProximaLlamada = fechaRecordatorio // Usamos la fecha corregida
+                ProximaLlamada = fechaRecordatorio
             };
 
             try
             {
                 _context.RegistroLlamadas.Add(nuevaLlamada);
 
-                // CAMBIO: Si el cliente está Pendiente, ahora pasa a "En Gestión"
                 var cliente = await _context.Clientes.FindAsync(clienteId);
-                if (cliente != null && cliente.Estado == "Pendiente")
+                if (cliente != null)
                 {
-                    cliente.Estado = "En Gestión";
+                    if (resultado == "Venta Cerrada")
+                    {
+                        cliente.Estado = "Cerrado";
+
+                        // --- NUEVA LÓGICA PARA PLAN WIN ---
+                        if (tarifaId.HasValue)
+                        {
+                            // Buscamos la información completa de la tarifa elegida
+                            var tarifa = await _context.TarifasPlan
+                                .Include(t => t.Plan)
+                                .ThenInclude(p => p.Zona)
+                                .FirstOrDefaultAsync(t => t.Id == tarifaId.Value);
+
+                            if (tarifa != null)
+                            {
+                                var venta = new RegistroVenta
+                                {
+                                    ClienteId = clienteId,
+                                    ZonaNombre = tarifa.Plan.Zona.Nombre,
+                                    PlanNombre = tarifa.Plan.Nombre,
+                                    VelocidadContratada = tarifa.Velocidad,
+                                    PrecioFinal = tarifa.PrecioPromocional,
+                                    FechaVenta = DateTime.UtcNow
+                                };
+                                _context.RegistrosVentas.Add(venta);
+                            }
+                        }
+                    }
+                    else if (cliente.Estado == "Pendiente")
+                    {
+                        cliente.Estado = "En Gestión";
+                    }
+
                     _context.Update(cliente);
                 }
 
                 await _context.SaveChangesAsync();
-                TempData["Mensaje"] = "Gestión registrada.";
+                TempData["Mensaje"] = "Gestión registrada correctamente.";
                 TempData["TipoMensaje"] = "success";
             }
-            catch (Exception ex) { /* ... log error ... */ }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "Error al registrar: " + ex.Message;
+                TempData["TipoMensaje"] = "danger";
+            }
 
             return RedirectToAction(nameof(Details), new { id = clienteId });
         }
 
-        // 4. ACCIÓN: Cambiar estado a atendido (desde la vista de detalle)
+        // 4. ACCIÓN: Cambiar estado a cerrado (desde la vista de detalle)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CompletarCliente(int id)

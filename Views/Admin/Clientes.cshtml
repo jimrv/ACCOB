@@ -155,8 +155,9 @@
                                     <div class="small"><i class="bi bi-geo-alt"></i> @cliente.Direccion</div>
                                 </td>
                                 <td>
-                                    <span
-                                        class="badge @(cliente.Estado == "Atendido" ? "bg-success" : "bg-warning text-dark")">
+                                    <span class="badge @(cliente.Estado == "Cerrado" ? "bg-success" : 
+                                                        cliente.Estado == "En Gestión" ? "bg-info text-dark" : 
+                                                        "bg-warning text-dark")">
                                         @cliente.Estado
                                     </span>
                                 </td>

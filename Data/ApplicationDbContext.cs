@@ -12,4 +12,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
     public DbSet<Cliente> Clientes { get; set; }
     public DbSet<RegistroLlamada> RegistroLlamadas { get; set; }
+    public DbSet<Zona> Zonas { get; set; }
+    public DbSet<PlanWin> PlanesWin { get; set; }
+    public DbSet<TarifaPlan> TarifasPlan { get; set; }
+    public DbSet<RegistroVenta> RegistrosVentas { get; set; }
 }

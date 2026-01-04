@@ -143,4 +143,12 @@ app.MapGet("/", context =>
     return Task.CompletedTask;
 });
 
+// Sembrar Planes Win y Zonas
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<ApplicationDbContext>();
+    await DbInitializer.SeedWinData(context); // Esto llena la base de datos
+}
+
 app.Run();
