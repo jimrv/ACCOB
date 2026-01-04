@@ -75,7 +75,7 @@
                     <span class="badge bg-white text-dark">@Model.Llamadas.Count gestiones</span>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                    <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light sticky-top">
                                 <tr class="small text-muted">
@@ -97,11 +97,36 @@
                                     </td>
                                     <td>
                                         <span
-                                            class="badge rounded-pill border text-dark bg-light">@llamada.Resultado</span>
+                                            class="badge rounded-pill border @(llamada.Resultado == "Venta Cerrada" ? "bg-success text-white" : "bg-light text-dark")">
+                                            @llamada.Resultado
+                                        </span>
                                     </td>
-                                    <td class="small text-break">@llamada.Observaciones</td>
-                                    <td class="pe-3">
-                                        @if (llamada.ProximaLlamada.HasValue)
+                                    <td class="small text-break">
+                                        @if (llamada.Resultado == "Venta Cerrada")
+                                                {
+                                                    // Buscamos la venta asociada al cliente
+                                                    // (Se asume que hay un registro en Model.Ventas para este cliente)
+                                                    var venta = Model.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
+                                                    if (venta != null)
+                                                    {
+                                                        <div
+                                                            class="p-2 mb-2 border-start border-4 border-success bg-white shadow-sm rounded-end">
+                                                            <div class="fw-bold text-success mb-1 small"><i
+                                                                    class="bi bi-cart-check-fill"></i> DATOS DE LA VENTA:</div>
+                                                            <div class="row g-1 small">
+                                                                <div class="col-12"><strong>Zona:</strong> @venta.ZonaNombre</div>
+                                                                <div class="col-12"><strong>Plan:</strong> @venta.PlanNombre</div>
+                                                                <div class="col-12"><strong>Tarifa:</strong> @venta.VelocidadContratada
+                                                                    - <span class="text-success fw-bold">S/ @venta.PrecioFinal</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                                <div class="text-muted">@llamada.Observaciones</div>
+                                            </td>
+                                            <td class="pe-3">
+                                                @if (llamada.ProximaLlamada.HasValue)
                                                 {
                                                     <div class="badge bg-danger-subtle text-danger border border-danger-subtle">
                                                         <i class="bi bi-calendar-check me-1"></i>
@@ -160,7 +185,7 @@
                                 <input type="datetime-local" name="proximaLlamada" class="form-control" />
                             </div>
 
-                            @* --- SECCIÓN DINÁMICA PLAN WIN (Aparece solo en Venta Cerrada) --- *@
+                            @* --- SECCIÓN DINÁMICA PLAN WIN --- *@
                             <div id="seccionPlanWin" class="col-12" style="display: none;">
                                 <div class="card border-success bg-success-subtle mb-2 shadow-sm">
                                     <div class="card-body py-3">
@@ -216,7 +241,6 @@
                     </form>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -224,11 +248,10 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            // 1. Mostrar/Ocultar sección de Plan Win según el resultado
+            // 1. Mostrar/Ocultar sección de Plan Win
             $('#selectResultado').on('change', function () {
                 if ($(this).val() === "Venta Cerrada") {
                     $('#seccionPlanWin').slideDown();
-                    // Opcional: hacer campos obligatorios
                     $('#selectZona, #selectPlan, #selectTarifa').prop('required', true);
                 } else {
                     $('#seccionPlanWin').slideUp();
@@ -236,7 +259,7 @@
                 }
             });
 
-            // 2. Cargar Planes por Zona (AJAX)
+            // 2. Cargar Planes por Zona
             $('#selectZona').change(function () {
                 var zonaId = $(this).val();
                 var $plan = $('#selectPlan');
@@ -252,13 +275,11 @@
                             $plan.append($('<option>', { value: item.id, text: item.nombre }));
                         });
                         $plan.prop('disabled', false);
-                    }).fail(function () {
-                        $plan.empty().append('<option>Error al cargar</option>');
                     });
                 }
             });
 
-            // 3. Cargar Tarifas por Plan (AJAX)
+            // 3. Cargar Tarifas por Plan
             $('#selectPlan').change(function () {
                 var planId = $(this).val();
                 var $tarifa = $('#selectTarifa');
@@ -273,8 +294,6 @@
                             $tarifa.append($('<option>', { value: item.id, text: label }));
                         });
                         $tarifa.prop('disabled', false);
-                    }).fail(function () {
-                        $tarifa.empty().append('<option>Error al cargar</option>');
                     });
                 }
             });

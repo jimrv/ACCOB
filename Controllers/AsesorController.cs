@@ -100,6 +100,7 @@ namespace ACCOB.Controllers
             var userId = _userManager.GetUserId(User);
             var cliente = await _context.Clientes
                 .Include(c => c.Llamadas)
+                .Include(c => c.Ventas)
                 .FirstOrDefaultAsync(m => m.Id == id && m.AsesorId == userId);
 
 

@@ -39,5 +39,8 @@ namespace ACCOB.Models
 
         // Relación: Un cliente puede tener muchos registros de llamadas
         public virtual ICollection<RegistroLlamada> Llamadas { get; set; } = new List<RegistroLlamada>();
+
+        //RELACIÓN: Para acceder a los datos de la venta cerrada
+        public virtual ICollection<RegistroVenta> Ventas { get; set; } = new List<RegistroVenta>();
     }
 }
