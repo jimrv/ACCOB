@@ -319,15 +319,22 @@
         }
 
         function verHistorial(clienteId) {
-            // 1. Mapeamos incluyendo el nombre del Asesor de la llamada
+            // 1. Mapeamos incluyendo las Ventas del cliente
             const clientesData = @Json.Serialize(Model.Clientes.Select(c => new {
                 id = c.Id,
                 nombre = c.Nombre,
+                // Traemos los datos de la venta si existen
+                venta = c.Ventas.OrderByDescending(v => v.FechaVenta).Select(v => new {
+                    zona = v.ZonaNombre,
+                    plan = v.PlanNombre,
+                    velocidad = v.VelocidadContratada,
+                    precio = v.PrecioFinal
+                }).FirstOrDefault(),
                 llamadas = c.Llamadas.Select(ll => new {
                     fechaLlamada = ll.FechaLlamada,
                     resultado = ll.Resultado,
                     observaciones = ll.Observaciones,
-                    nombreAsesor = ll.Asesor != null ? ll.Asesor.Nombre : "Sistema" // <--- Mapeo del asesor
+                    nombreAsesor = ll.Asesor != null ? ll.Asesor.Nombre : "Sistema"
                 }).ToList()
             }));
 
@@ -341,8 +348,9 @@
                                 <thead class="table-light">
                                     <tr class="small">
                                         <th>Fecha</th>
-                                        <th>Asesor</th> <th>Resultado</th>
-                                        <th>Observaciones</th>
+                                        <th>Asesor</th> 
+                                        <th>Resultado</th>
+                                        <th>Detalles / Observaciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>`;
@@ -351,10 +359,33 @@
                 
                 llamadasOrdenadas.forEach(ll => {
                     const fecha = new Date(ll.fechaLlamada).toLocaleString('es-PE');
+                    
+                    // Lógica para mostrar el plan si el resultado es Venta Cerrada
+                    let infoPlan = "";
+                    if (ll.resultado === "Venta Cerrada" && cliente.venta) {
+                        infoPlan = `
+                            <div class="mt-2 p-2 border-start border-4 border-success bg-white shadow-sm rounded">
+                                <small class="d-block text-success fw-bold text-uppercase" style="font-size: 0.7rem;">
+                                    <i class="bi bi-cart-check-fill"></i> Plan Contratado
+                                </small>
+                                <div class="row g-0 mt-1" style="font-size: 0.85rem;">
+                                    <div class="col-12"><strong>Zona:</strong> ${cliente.venta.zona}</div>
+                                    <div class="col-12"><strong>Plan:</strong> ${cliente.venta.plan}</div>
+                                    <div class="col-12"><strong>Tarifa:</strong> ${cliente.venta.velocidad} - 
+                                        <span class="text-success fw-bold">S/ ${cliente.venta.precio.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
+
                     html += `<tr class="small">
                                 <td class="text-nowrap">${fecha}</td>
-                                <td class="fw-bold text-primary">${ll.nombreAsesor}</td> <td><span class="badge bg-light text-dark border">${ll.resultado}</span></td>
-                                <td>${ll.observaciones || '-'}</td>
+                                <td class="fw-bold text-primary">${ll.nombreAsesor}</td> 
+                                <td><span class="badge bg-light text-dark border">${ll.resultado}</span></td>
+                                <td>
+                                    ${infoPlan}
+                                    <div class="mt-1 text-muted">${ll.observaciones || '-'}</div>
+                                </td>
                             </tr>`;
                 });
                 html += `</tbody></table></div>`;

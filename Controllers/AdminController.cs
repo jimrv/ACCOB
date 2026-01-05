@@ -266,6 +266,7 @@ namespace ACCOB.Controllers
             // Consulta base
             var query = _context.Clientes
                 .Include(c => c.Asesor)
+                .Include(c => c.Ventas)
                 .Include(c => c.Llamadas)
                     .ThenInclude(l => l.Asesor)
                 .AsQueryable();
