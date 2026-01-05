@@ -258,7 +258,6 @@
             const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
             contador.innerText = seleccionados;
 
-            // Cambiar color del contador si hay seleccionados
             if (seleccionados > 0) {
                 contador.classList.replace('bg-secondary', 'bg-primary');
             } else {
@@ -300,7 +299,7 @@
             }
         }
 
-        // 4. Acciones Individuales (Asignar y Eliminar)
+        // 4. Acciones Individuales
         function asignarIndividual(clienteId, asesorId) {
             document.getElementById('indivClienteId').value = clienteId;
             document.getElementById('indivAsesorId').value = asesorId;
@@ -314,12 +313,11 @@
             }
         }
 
+        // 5. Función de Historial con BARRA DE MOVIMIENTO (MODIFICADA)
         function verHistorial(clienteId) {
-            // 1. Mapeamos incluyendo las Ventas del cliente
             const clientesData = @Json.Serialize(Model.Clientes.Select(c => new {
                 id = c.Id,
                 nombre = c.Nombre,
-                // Traemos los datos de la venta si existen
                 venta = c.Ventas.OrderByDescending(v => v.FechaVenta).Select(v => new {
                     zona = v.ZonaNombre,
                     plan = v.PlanNombre,
@@ -339,9 +337,10 @@
             let html = `<h6>Cliente: <strong>${cliente.nombre}</strong></h6><hr>`;
             
             if (cliente.llamadas && cliente.llamadas.length > 0) {
-                html += `<div class="table-responsive">
-                            <table class="table table-sm table-striped">
-                                <thead class="table-light">
+                // AGREGADO: max-height y overflow-y para la barra de movimiento
+                html += `<div class="table-responsive" style="max-height: 500px; overflow-y: auto; border: 1px solid #dee2e6;">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead class="table-light sticky-top" style="z-index: 10;">
                                     <tr class="small">
                                         <th>Fecha</th>
                                         <th>Asesor</th> 
@@ -356,7 +355,6 @@
                 llamadasOrdenadas.forEach(ll => {
                     const fecha = new Date(ll.fechaLlamada).toLocaleString('es-PE');
                     
-                    // Lógica para mostrar el plan si el resultado es Venta Cerrada
                     let infoPlan = "";
                     if (ll.resultado === "Venta Cerrada" && cliente.venta) {
                         infoPlan = `
