@@ -35,16 +35,31 @@
 
                     <div class="border-top pt-3">
                         <dl class="row small mb-0">
-                            <dt class="col-sm-4 text-muted">DNI:</dt>
-                            <dd class="col-sm-8 fw-bold">@Model.Dni</dd>
-                            <dt class="col-sm-4 text-muted">Email:</dt>
-                            <dd class="col-sm-8 text-truncate">@Model.Email</dd>
-                            <dt class="col-sm-4 text-muted">Teléfono:</dt>
-                            <dd class="col-sm-8">@Model.Telefono</dd>
-                            <dt class="col-sm-4 text-muted">Dirección:</dt>
-                            <dd class="col-sm-8">@Model.Direccion</dd>
-                            <dt class="col-sm-4 text-muted">Registro:</dt>
-                            <dd class="col-sm-8">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
+                            <dt class="col-sm-5 text-muted">DNI:</dt>
+                            <dd class="col-sm-7 fw-bold">@Model.Dni</dd>
+
+                            <dt class="col-sm-5 text-muted">Teléfono Principal:</dt>
+                            <dd class="col-sm-7">@Model.Telefono</dd>
+                            
+
+                            @* --- NUEVOS CAMPOS DE UBICACIÓN --- *@
+                            <dt class="col-sm-5 text-muted">Ubicación:</dt>
+                            <dd class="col-sm-7 text-uppercase" style="font-size: 0.75rem;">
+                                @Model.Distrito, @Model.Provincia, @Model.Departamento
+                            </dd>
+
+                            <dt class="col-sm-5 text-muted">Dirección:</dt>
+                            <dd class="col-sm-7">@(Model.Direccion ?? "-")</dd>
+
+                            @* --- NUEVOS TELÉFONOS DE REFERENCIA --- *@
+                            <dt class="col-sm-5 text-muted">Tefl. Ref. 1:</dt>
+                            <dd class="col-sm-7">@(Model.NumRef1 ?? "-")</dd>
+
+                            <dt class="col-sm-5 text-muted">Tefl. Ref. 2:</dt>
+                            <dd class="col-sm-7">@(Model.NumRef2 ?? "-")</dd>
+
+                            <dt class="col-sm-5 text-muted">Fecha Registro:</dt>
+                            <dd class="col-sm-7">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
                         </dl>
                     </div>
 
@@ -104,8 +119,6 @@
                                     <td class="small text-break">
                                         @if (llamada.Resultado == "Venta Cerrada")
                                                 {
-                                                    // Buscamos la venta asociada al cliente
-                                                    // (Se asume que hay un registro en Model.Ventas para este cliente)
                                                     var venta = Model.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
                                                     if (venta != null)
                                                     {
@@ -185,7 +198,6 @@
                                 <input type="datetime-local" name="proximaLlamada" class="form-control" />
                             </div>
 
-                            @* --- SECCIÓN DINÁMICA PLAN WIN --- *@
                             <div id="seccionPlanWin" class="col-12" style="display: none;">
                                 <div class="card border-success bg-success-subtle mb-2 shadow-sm">
                                     <div class="card-body py-3">
@@ -241,6 +253,7 @@
                     </form>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -248,7 +261,7 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            // 1. Mostrar/Ocultar sección de Plan Win
+            // Mostrar/Ocultar sección de Plan Win
             $('#selectResultado').on('change', function () {
                 if ($(this).val() === "Venta Cerrada") {
                     $('#seccionPlanWin').slideDown();
@@ -259,7 +272,7 @@
                 }
             });
 
-            // 2. Cargar Planes por Zona
+            // Cargar Planes por Zona
             $('#selectZona').change(function () {
                 var zonaId = $(this).val();
                 var $plan = $('#selectPlan');
@@ -279,7 +292,7 @@
                 }
             });
 
-            // 3. Cargar Tarifas por Plan
+            // Cargar Tarifas por Plan
             $('#selectPlan').change(function () {
                 var planId = $(this).val();
                 var $tarifa = $('#selectTarifa');
