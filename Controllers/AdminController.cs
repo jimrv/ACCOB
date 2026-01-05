@@ -459,19 +459,17 @@ namespace ACCOB.Controllers
         {
             var query = _context.Clientes
                 .Include(c => c.Asesor)
+                .Include(c => c.Ventas)
                 .Include(c => c.Llamadas)
                     .ThenInclude(l => l.Asesor)
                 .AsQueryable();
 
-            // Aplicamos los mismos filtros que en la vista
-            if (!string.IsNullOrEmpty(dni))
-                query = query.Where(c => c.Dni.Contains(dni));
-
+            // Filtros de búsqueda (Normalizados para evitar fallos por tildes o mayúsculas)
             if (!string.IsNullOrEmpty(nombre))
-                query = query.Where(c => c.Nombre.ToLower().Contains(nombre.ToLower()));
+                query = query.Where(c => c.Nombre.ToLower().Contains(nombre.ToLower()) || c.Dni.Contains(nombre));
 
             if (!string.IsNullOrEmpty(estado))
-                query = query.Where(c => c.Estado == estado);
+                query = query.Where(c => c.Estado.ToLower() == estado.ToLower().Trim());
 
             if (!string.IsNullOrEmpty(asesorId))
                 query = query.Where(c => c.AsesorId == asesorId);
@@ -484,61 +482,85 @@ namespace ACCOB.Controllers
 
             var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
 
-            // Generación del Excel con ClosedXML
             using (var workbook = new XLWorkbook())
             {
                 var worksheet = workbook.Worksheets.Add("Reporte de Clientes");
                 var currentRow = 1;
 
-                // Cabeceras
+                // --- CABECERAS (Definición única de columnas) ---
                 worksheet.Cell(currentRow, 1).Value = "Fecha Registro";
                 worksheet.Cell(currentRow, 2).Value = "DNI";
                 worksheet.Cell(currentRow, 3).Value = "Nombre Cliente";
                 worksheet.Cell(currentRow, 4).Value = "Telefono Cliente";
                 worksheet.Cell(currentRow, 5).Value = "Estado Actual";
-                worksheet.Cell(currentRow, 6).Value = "Email Cliente";
-                worksheet.Cell(currentRow, 7).Value = "Direccion Cliente";
-                worksheet.Cell(currentRow, 8).Value = "Asesor Asignado";
-                worksheet.Cell(currentRow, 9).Value = "Último Resultado";
-                worksheet.Cell(currentRow, 10).Value = "Asesor Última Gestión";
-
+                worksheet.Cell(currentRow, 6).Value = "Asesor Asignado";
+                worksheet.Cell(currentRow, 7).Value = "Zona Win";
+                worksheet.Cell(currentRow, 8).Value = "Plan Contratado";
+                worksheet.Cell(currentRow, 9).Value = "Velocidad";
+                worksheet.Cell(currentRow, 10).Value = "Precio Final";
+                worksheet.Cell(currentRow, 11).Value = "DNI";
+                worksheet.Cell(currentRow, 12).Value = "Nombre Cliente";
+                worksheet.Cell(currentRow, 13).Value = "Email Cliente";
+                worksheet.Cell(currentRow, 14).Value = "Direccion Cliente";
+                worksheet.Cell(currentRow, 15).Value = "Último Resultado";
+                worksheet.Cell(currentRow, 16).Value = "Asesor Última Gestión";
                 // Estilo de cabecera
                 var headerRow = worksheet.Row(1);
                 headerRow.Style.Font.Bold = true;
                 headerRow.Style.Fill.BackgroundColor = XLColor.Black;
                 headerRow.Style.Font.FontColor = XLColor.White;
 
-                // Datos
                 var zonaPeru = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+
                 foreach (var cliente in clientes)
                 {
                     currentRow++;
 
-                    // Obtener la última llamada registrada
-                    var ultimaLlamada = cliente.Llamadas
-                        .OrderByDescending(l => l.FechaLlamada)
-                        .FirstOrDefault();
+                    var ultimaLlamada = cliente.Llamadas.OrderByDescending(l => l.FechaLlamada).FirstOrDefault();
+                    var datosVenta = cliente.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
 
+                    // Datos base del cliente
                     worksheet.Cell(currentRow, 1).Value = TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro, zonaPeru).ToString("dd/MM/yyyy HH:mm");
                     worksheet.Cell(currentRow, 2).Value = cliente.Dni;
                     worksheet.Cell(currentRow, 3).Value = cliente.Nombre;
                     worksheet.Cell(currentRow, 4).Value = cliente.Telefono;
                     worksheet.Cell(currentRow, 5).Value = cliente.Estado;
-                    worksheet.Cell(currentRow, 6).Value = cliente.Email;
-                    worksheet.Cell(currentRow, 7).Value = cliente.Direccion;
-                    worksheet.Cell(currentRow, 8).Value = cliente.Asesor?.Nombre ?? "Sin asignar";
-                    worksheet.Cell(currentRow, 9).Value = ultimaLlamada?.Resultado ?? "Sin gestiones";
-                    worksheet.Cell(currentRow, 10).Value = ultimaLlamada?.Asesor?.Nombre ?? "-";
+                    worksheet.Cell(currentRow, 6).Value = cliente.Asesor?.Nombre ?? "Sin asignar";
+
+                    // --- Lógica de Venta (Columnas 7 a 10) ---
+                    // Usamos Equals con OrdinalIgnoreCase para que "Cerrado" o "cerrado" funcionen igual
+                    if (string.Equals(cliente.Estado, "Cerrado", StringComparison.OrdinalIgnoreCase) && datosVenta != null)
+                    {
+                        worksheet.Cell(currentRow, 7).Value = datosVenta.ZonaNombre;
+                        worksheet.Cell(currentRow, 8).Value = datosVenta.PlanNombre;
+                        worksheet.Cell(currentRow, 9).Value = datosVenta.VelocidadContratada;
+                        worksheet.Cell(currentRow, 10).Value = datosVenta.PrecioFinal;
+                        worksheet.Cell(currentRow, 10).Style.NumberFormat.Format = "S/#,##0.00";
+                    }
+                    else
+                    {
+                        worksheet.Cell(currentRow, 7).Value = "-";
+                        worksheet.Cell(currentRow, 8).Value = "-";
+                        worksheet.Cell(currentRow, 9).Value = "-";
+                        worksheet.Cell(currentRow, 10).Value = "-";
+                    }
+
+                    // --- Datos adicionales (Columnas 11 a 14) ---
+                    worksheet.Cell(currentRow, 11).Value = cliente.Dni;
+                    worksheet.Cell(currentRow, 12).Value = cliente.Nombre;
+                    worksheet.Cell(currentRow, 13).Value = cliente.Email;
+                    worksheet.Cell(currentRow, 14).Value = cliente.Direccion;
+                    worksheet.Cell(currentRow, 15).Value = ultimaLlamada?.Resultado ?? "Sin gestiones";
+                    worksheet.Cell(currentRow, 16).Value = ultimaLlamada?.Asesor?.Nombre ?? "-";
                 }
 
-                worksheet.Columns().AdjustToContents(); // Ajustar ancho de columnas automáticamente
+                worksheet.Columns().AdjustToContents();
 
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
                     var content = stream.ToArray();
                     var fileName = $"Reporte_Clientes_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
             }

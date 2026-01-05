@@ -44,7 +44,9 @@
                     <select name="estado" class="form-select form-select-sm">
                         <option value="">Todos</option>
                         <option value="Pendiente" selected="@(Model.Estado == "Pendiente")">Pendiente</option>
-                        <option value="Atendido" selected="@(Model.Estado == "Atendido")">Atendido</option>
+                        @* Corregido: value="En Gestión" con tilde *@
+                        <option value="En Gestión" selected="@(Model.Estado == "En Gestión")">En Gestión</option>
+                        <option value="Cerrado" selected="@(Model.Estado == "Cerrado")">Cerrado</option>
                     </select>
                 </div>
                 <div class="col-md-2">
