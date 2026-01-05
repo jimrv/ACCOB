@@ -58,10 +58,38 @@
                             <span asp-validation-for="Telefono" class="text-danger"></span>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Departamento" class="form-label">Departamento</label>
+                                <input asp-for="Departamento" class="form-control" placeholder="Ej: Lima" />
+                                <span asp-validation-for="Departamento" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Provincia" class="form-label">Provincia</label>
+                                <input asp-for="Provincia" class="form-control" placeholder="Ej: Lima" />
+                                <span asp-validation-for="Provincia" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="Distrito" class="form-label">Distrito</label>
+                                <input asp-for="Distrito" class="form-control" placeholder="Ej: Los Olivos" />
+                                <span asp-validation-for="Distrito" class="text-danger"></span>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label asp-for="Direccion" class="form-label">Dirección</label>
                             <input asp-for="Direccion" class="form-control" placeholder="Ej: Av. Principal 123" />
-                            <span asp-validation-for="Direccion" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NumRef1" class="form-label">Teléfono Referencia 1</label>
+                                <input asp-for="NumRef1" class="form-control" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NumRef2" class="form-label">Teléfono Referencia 2</label>
+                                <input asp-for="NumRef2" class="form-control" />
+                            </div>
                         </div>
 
                         <div class="mb-3">

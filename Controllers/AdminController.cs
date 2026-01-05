@@ -257,7 +257,7 @@ namespace ACCOB.Controllers
         }
 
         // GET: Lista de clientes
-        public async Task<IActionResult> Clientes(string? dni, string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin)
+        public async Task<IActionResult> Clientes(string? dni, string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
         {
             // Cargar asesores para el dropdown del filtro
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
@@ -293,6 +293,13 @@ namespace ACCOB.Controllers
                 }
             }
 
+            //Filtro por Ubicación
+            if (!string.IsNullOrEmpty(provincia))
+                query = query.Where(c => c.Provincia.Contains(provincia));
+
+            if (!string.IsNullOrEmpty(distrito))
+                query = query.Where(c => c.Distrito.Contains(distrito));
+
             // Filtro por Rango de Fechas
             if (fechaInicio.HasValue)
                 query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
@@ -308,7 +315,9 @@ namespace ACCOB.Controllers
                 Estado = estado,
                 AsesorId = asesorId,
                 FechaInicio = fechaInicio,
-                FechaFin = fechaFin
+                FechaFin = fechaFin,
+                Provincia = provincia,
+                Distrito = distrito
             };
 
             return View(model);
@@ -402,7 +411,13 @@ namespace ACCOB.Controllers
                             string nombre = fila.Cell(2).GetValue<string>().Trim();
                             string email = fila.Cell(3).GetValue<string>().Trim();
                             string telefono = fila.Cell(4).GetValue<string>().Trim();
-                            string direccion = fila.Cell(5).GetValue<string>().Trim();
+                            string departamento = fila.Cell(5).GetValue<string>().Trim();
+                            string provincia = fila.Cell(6).GetValue<string>().Trim();
+                            string distrito = fila.Cell(7).GetValue<string>().Trim();
+                            string direccion = fila.Cell(8).GetValue<string>().Trim();
+                            string ref1 = fila.Cell(9).GetValue<string>().Trim();
+                            string ref2 = fila.Cell(10).GetValue<string>().Trim();
+
 
                             // Validación mínima: DNI y Nombre no pueden estar vacíos
                             if (string.IsNullOrEmpty(dni) || string.IsNullOrEmpty(nombre))
@@ -418,7 +433,12 @@ namespace ACCOB.Controllers
                                 Nombre = nombre,
                                 Email = email,
                                 Telefono = telefono,
-                                Direccion = direccion,
+                                Departamento = departamento,
+                                Provincia = provincia,
+                                Distrito = distrito,
+                                Direccion = direccion, // Ahora es opcional
+                                NumRef1 = ref1,
+                                NumRef2 = ref2,
                                 Estado = "Pendiente",
                                 FechaRegistro = DateTime.UtcNow, // Guardamos en UTC para Postgres
                                 AsesorId = null
@@ -502,9 +522,14 @@ namespace ACCOB.Controllers
                 worksheet.Cell(currentRow, 11).Value = "DNI";
                 worksheet.Cell(currentRow, 12).Value = "Nombre Cliente";
                 worksheet.Cell(currentRow, 13).Value = "Email Cliente";
-                worksheet.Cell(currentRow, 14).Value = "Direccion Cliente";
-                worksheet.Cell(currentRow, 15).Value = "Último Resultado";
-                worksheet.Cell(currentRow, 16).Value = "Asesor Última Gestión";
+                worksheet.Cell(currentRow, 14).Value = "Departamento Cliente";
+                worksheet.Cell(currentRow, 15).Value = "Provincia Cliente";
+                worksheet.Cell(currentRow, 16).Value = "Distrito Cliente";
+                worksheet.Cell(currentRow, 17).Value = "Dirección Cliente";
+                worksheet.Cell(currentRow, 18).Value = "Número Ref 1";
+                worksheet.Cell(currentRow, 19).Value = "Número Ref 2";
+                worksheet.Cell(currentRow, 20).Value = "Último Resultado";
+                worksheet.Cell(currentRow, 21).Value = "Asesor Última Gestión";
                 // Estilo de cabecera
                 var headerRow = worksheet.Row(1);
                 headerRow.Style.Font.Bold = true;
@@ -550,9 +575,14 @@ namespace ACCOB.Controllers
                     worksheet.Cell(currentRow, 11).Value = cliente.Dni;
                     worksheet.Cell(currentRow, 12).Value = cliente.Nombre;
                     worksheet.Cell(currentRow, 13).Value = cliente.Email;
-                    worksheet.Cell(currentRow, 14).Value = cliente.Direccion;
-                    worksheet.Cell(currentRow, 15).Value = ultimaLlamada?.Resultado ?? "Sin gestiones";
-                    worksheet.Cell(currentRow, 16).Value = ultimaLlamada?.Asesor?.Nombre ?? "-";
+                    worksheet.Cell(currentRow, 14).Value = cliente.Departamento;
+                    worksheet.Cell(currentRow, 15).Value = cliente.Provincia;
+                    worksheet.Cell(currentRow, 16).Value = cliente.Distrito;
+                    worksheet.Cell(currentRow, 17).Value = cliente.Direccion ?? "-";
+                    worksheet.Cell(currentRow, 18).Value = cliente.NumRef1 ?? "-";
+                    worksheet.Cell(currentRow, 19).Value = cliente.NumRef2 ?? "-";
+                    worksheet.Cell(currentRow, 20).Value = ultimaLlamada?.Resultado ?? "Sin gestiones";
+                    worksheet.Cell(currentRow, 21).Value = ultimaLlamada?.Asesor?.Nombre ?? "-";
                 }
 
                 worksheet.Columns().AdjustToContents();

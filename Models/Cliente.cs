@@ -26,21 +26,30 @@ namespace ACCOB.Models
         [RegularExpression(@"^\d{9,15}$", ErrorMessage = "El teléfono debe tener entre 9 y 15 dígitos")]
         public string Telefono { get; set; }
 
-        public string Direccion { get; set; }
+        // Nuevos campos de ubicación
+        [Required(ErrorMessage = "El Departamento es obligatorio")]
+        public string Departamento { get; set; }
+
+        [Required(ErrorMessage = "La Provincia es obligatoria")]
+        public string Provincia { get; set; }
+
+        [Required(ErrorMessage = "El Distrito es obligatorio")]
+        public string Distrito { get; set; }
+
+        // Direccion ahora es opcional (?)
+        public string? Direccion { get; set; }
+
+        // Números de referencia opcionales
+        public string? NumRef1 { get; set; }
+        public string? NumRef2 { get; set; }
 
         public string Estado { get; set; } = "Pendiente";
-
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
-
         public string? AsesorId { get; set; }
 
         [ForeignKey("AsesorId")]
         public virtual ApplicationUser? Asesor { get; set; }
-
-        // Relación: Un cliente puede tener muchos registros de llamadas
         public virtual ICollection<RegistroLlamada> Llamadas { get; set; } = new List<RegistroLlamada>();
-
-        //RELACIÓN: Para acceder a los datos de la venta cerrada
         public virtual ICollection<RegistroVenta> Ventas { get; set; } = new List<RegistroVenta>();
     }
 }

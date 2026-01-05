@@ -35,8 +35,8 @@
         </div>
         <div class="card-body">
             <form id="filterForm" method="get" asp-action="Clientes" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label small">Nombre/ DNI del Cliente</label>
+                <div class="col-md-2">
+                    <label class="form-label small">Nombre/DNI</label>
                     <input type="text" name="nombre" value="@Model.Nombre" class="form-control form-control-sm" />
                 </div>
                 <div class="col-md-2">
@@ -44,41 +44,35 @@
                     <select name="estado" class="form-select form-select-sm">
                         <option value="">Todos</option>
                         <option value="Pendiente" selected="@(Model.Estado == "Pendiente")">Pendiente</option>
-                        @* Corregido: value="En Gestión" con tilde *@
                         <option value="En Gestión" selected="@(Model.Estado == "En Gestión")">En Gestión</option>
                         <option value="Cerrado" selected="@(Model.Estado == "Cerrado")">Cerrado</option>
                     </select>
                 </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label small">Provincia</label>
+                    <input type="text" name="provincia" value="@Model.Provincia" class="form-control form-control-sm" placeholder="Buscar provincia..." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Distrito</label>
+                    <input type="text" name="distrito" value="@Model.Distrito" class="form-control form-control-sm" placeholder="Buscar distrito..." />
+                </div>
+
                 <div class="col-md-2">
                     <label class="form-label small">Asesor</label>
                     <select name="asesorId" class="form-select form-select-sm">
                         <option value="">Todos</option>
-                        <option value="sin_asignar" selected="@(Model.AsesorId == "sin_asignar")">-- Sin Asignar --
-                        </option>
-
+                        <option value="sin_asignar" selected="@(Model.AsesorId == "sin_asignar")">-- Sin Asignar --</option>
                         @foreach (var item in (SelectList)ViewBag.Asesores)
                         {
-                            <!option value="@item.Value" @(Model.AsesorId == item.Value ? "selected" : "")>
-                                @item.Text
-                            </!option>
+                            <!option value="@item.Value" @(Model.AsesorId == item.Value ? "selected" : "")>@item.Text</!option>
                         }
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small">Desde</label>
-                    <input type="date" name="fechaInicio" value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))"
-                        class="form-control form-control-sm" />
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small">Hasta</label>
-                    <input type="date" name="fechaFin" value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))"
-                        class="form-control form-control-sm" />
-                </div>
-                <div class="col-md-1 d-flex align-items-end gap-1">
-                    <button type="submit" class="btn btn-dark btn-sm w-100"><i class="bi bi-search"></i></button>
-                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100">
-                        <i class="bi bi-x-circle"></i>
-                    </a>
+                
+                <div class="col-md-2 d-flex align-items-end gap-1">
+                    <button type="submit" class="btn btn-dark btn-sm w-100"><i class="bi bi-search"></i> Filtrar</button>
+                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-x-circle"></i> Limpiar</a>
                 </div>
             </form>
         </div>
@@ -151,10 +145,12 @@
                                 <td>@cliente.Nombre</td>
                                 <td>
                                     <div class="small"><i class="bi bi-envelope"></i> @cliente.Email</div>
-                                    <div class="small"><i class="bi bi-phone"></i> @cliente.Telefono</div>
+                                    <div class="small"><i class="bi bi-telephone"></i> @cliente.Telefono</div>
+                                    
                                 </td>
                                 <td>
-                                    <div class="small"><i class="bi bi-geo-alt"></i> @cliente.Direccion</div>
+                                    <div class="small fw-bold"><i class="bi bi-geo-alt"></i> @cliente.Distrito, @cliente.Provincia</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">@cliente.Direccion</div>
                                 </td>
                                 <td>
                                     <span class="badge @(cliente.Estado == "Cerrado" ? "bg-success" : 

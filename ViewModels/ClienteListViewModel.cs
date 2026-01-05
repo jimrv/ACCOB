@@ -3,14 +3,16 @@ namespace ACCOB.ViewModels
     public class ClienteListViewModel
     {
         public IEnumerable<ACCOB.Models.Cliente> Clientes { get; set; }
-        
+
         // Propiedades para los filtros
-        
+
         public string? Dni { get; set; }
         public string? Nombre { get; set; }
         public string? Estado { get; set; }
         public string? AsesorId { get; set; }
         public DateTime? FechaInicio { get; set; }
         public DateTime? FechaFin { get; set; }
+        public string? Provincia { get; set; }
+        public string? Distrito { get; set; }
     }
 }
