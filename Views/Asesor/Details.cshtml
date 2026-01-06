@@ -18,7 +18,8 @@
                     <div class="text-center mb-4">
                         <i class="bi bi-person-badge display-4 text-primary"></i>
                         <h3 class="mt-2 h4">@Model.NombreCompleto</h3>
-                        <span class="badge p-2 @(Model.Estado == "Cerrado" ? "bg-success" : (Model.Estado == "En Gestión" ? "bg-info text-dark" : "bg-warning text-dark"))">
+                        <span
+                            class="badge p-2 @(Model.Estado == "Cerrado" ? "bg-success" : (Model.Estado == "En Gestión" ? "bg-info text-dark" : "bg-warning text-dark"))">
                             Estado: @Model.Estado
                         </span>
                     </div>
@@ -40,7 +41,13 @@
                             </dd>
 
                             <dt class="col-sm-5 text-muted">Dirección:</dt>
-                            <dd class="col-sm-7">@(Model.Direccion ?? "-")</dd>
+                            <dd class="col-sm-7 d-flex justify-content-between align-items-start">
+                                <span>@(Model.Direccion ?? "-")</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary border-0 p-0 ms-2"
+                                    data-bs-toggle="modal" data-bs-target="#modalDireccion">
+                                    <i class="bi bi-pencil-square"></i> 
+                                </button>
+                            </dd>
 
                             <dt class="col-sm-5 text-muted">Tefl. Ref. 1:</dt>
                             <dd class="col-sm-7">@(Model.NumRef1 ?? "-")</dd>
@@ -58,7 +65,7 @@
                         <hr>
                         <div class="d-grid gap-2">
                             <form asp-action="CompletarCliente" method="post"
-                                  onsubmit="return confirm('¿Deseas marcar este expediente como CERRADO?');">
+                                onsubmit="return confirm('¿Deseas marcar este expediente como CERRADO?');">
                                 <input type="hidden" name="id" value="@Model.Id" />
                                 <button type="submit" class="btn btn-success btn-sm w-100 shadow-sm">
                                     <i class="bi bi-lock-fill"></i> Marcar como Cerrado
@@ -98,25 +105,31 @@
                                     {
                                         <tr>
                                             <td class="small ps-3 text-nowrap">
-                                                @TimeZoneInfo.ConvertTimeFromUtc(llamada.FechaLlamada, zonaPeru).ToString("dd/MM/yy HH:mm")
-                                            </td>
-                                            <td>
-                                                <span class="badge rounded-pill border @(llamada.Resultado == "Venta Cerrada" ? "bg-success text-white" : "bg-light text-dark")">
-                                                    @llamada.Resultado
-                                                </span>
-                                            </td>
-                                            <td class="small text-break">
-                                                @if (llamada.Resultado == "Venta Cerrada")
+                                                @TimeZoneInfo.ConvertTimeFromUtc(llamada.FechaLlamada,
+                                                zonaPeru).ToString("dd/MM/yy HH:mm")
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge rounded-pill border @(llamada.Resultado == "Venta Cerrada" ? "bg-success text-white" : "bg-light text-dark")">
+                                            @llamada.Resultado
+                                        </span>
+                                    </td>
+                                    <td class="small text-break">
+                                        @if (llamada.Resultado == "Venta Cerrada")
                                                 {
                                                     var venta = Model.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
                                                     if (venta != null)
                                                     {
-                                                        <div class="p-2 mb-2 border-start border-4 border-success bg-white shadow-sm rounded-end">
-                                                            <div class="fw-bold text-success mb-1 small"><i class="bi bi-cart-check-fill"></i> DATOS DE LA VENTA:</div>
+                                                        <div
+                                                            class="p-2 mb-2 border-start border-4 border-success bg-white shadow-sm rounded-end">
+                                                            <div class="fw-bold text-success mb-1 small"><i
+                                                                    class="bi bi-cart-check-fill"></i> DATOS DE LA VENTA:</div>
                                                             <div class="row g-1 small">
                                                                 <div class="col-12"><strong>Zona:</strong> @venta.ZonaNombre</div>
                                                                 <div class="col-12"><strong>Plan:</strong> @venta.PlanNombre</div>
-                                                                <div class="col-12"><strong>Tarifa:</strong> @venta.VelocidadContratada - <span class="text-success fw-bold">S/ @venta.PrecioFinal</span></div>
+                                                                <div class="col-12"><strong>Tarifa:</strong> @venta.VelocidadContratada
+                                                                    - <span class="text-success fw-bold">S/ @venta.PrecioFinal</span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     }
@@ -157,7 +170,8 @@
             @* 2. FORMULARIO DE REGISTRO *@
             <div class="card shadow border-0 border-top border-primary border-4">
                 <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 text-primary h6"><i class="bi bi-pencil-square me-2"></i>Nueva Gestión de Llamada</h5>
+                    <h5 class="mb-0 text-primary h6"><i class="bi bi-pencil-square me-2"></i>Nueva Gestión de Llamada
+                    </h5>
                 </div>
                 <div class="card-body bg-light-subtle">
                     <form asp-action="RegistrarLlamada" method="post" id="formLlamada">
@@ -192,7 +206,8 @@
                                         <div class="row g-2">
                                             <div class="col-md-4">
                                                 <label class="form-label small fw-bold">Zona</label>
-                                                <select id="selectZona" name="zonaId" class="form-select form-select-sm">
+                                                <select id="selectZona" name="zonaId"
+                                                    class="form-select form-select-sm">
                                                     <option value="">Seleccione Zona...</option>
                                                     @if (ViewBag.Zonas != null)
                                                     {
@@ -205,13 +220,15 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label small fw-bold">Plan</label>
-                                                <select id="selectPlan" name="planWinId" class="form-select form-select-sm" disabled>
+                                                <select id="selectPlan" name="planWinId"
+                                                    class="form-select form-select-sm" disabled>
                                                     <option value="">Primero elija zona...</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label small fw-bold">Velocidad / Tarifa</label>
-                                                <select id="selectTarifa" name="tarifaId" class="form-select form-select-sm" disabled>
+                                                <select id="selectTarifa" name="tarifaId"
+                                                    class="form-select form-select-sm" disabled>
                                                     <option value="">Primero elija plan...</option>
                                                 </select>
                                             </div>
@@ -223,7 +240,7 @@
                             <div class="col-12">
                                 <label class="form-label small fw-bold">Observaciones Detalladas</label>
                                 <textarea name="observaciones" class="form-control" rows="3" required
-                                          placeholder="Describa los puntos clave tratados..."></textarea>
+                                    placeholder="Describa los puntos clave tratados..."></textarea>
                             </div>
 
                             <div class="col-12 text-end">
@@ -236,6 +253,33 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDireccion" tabindex="-1" aria-labelledby="modalDireccionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalDireccionLabel"><i class="bi bi-geo-alt me-2"></i>Actualizar Dirección
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <form asp-action="ActualizarDireccion" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nueva Dirección para @Model.NombreCompleto</label>
+                        <textarea name="direccion" class="form-control" rows="3"
+                            placeholder="Ej: Av. Las Palmeras 123, Int 402...">@Model.Direccion</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

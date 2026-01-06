@@ -75,8 +75,8 @@ namespace ACCOB.Controllers
             {
                 var b = buscar.ToLower().Trim();
                 // Buscamos coincidencia en DNI, Nombre o Apellido
-                query = query.Where(c => c.Dni.Contains(b) 
-                                      || c.Nombre.ToLower().Contains(b) 
+                query = query.Where(c => c.Dni.Contains(b)
+                                      || c.Nombre.ToLower().Contains(b)
                                       || c.Apellido.ToLower().Contains(b));
             }
 
@@ -213,6 +213,29 @@ namespace ACCOB.Controllers
             }
 
             return RedirectToAction(nameof(Details), new { id = clienteId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActualizarDireccion(int id, string? direccion)
+        {
+            var userId = _userManager.GetUserId(User);
+            var cliente = await _context.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id && c.AsesorId == userId);
+
+            if (cliente != null)
+            {
+                // Si direccion es nulo o espacios en blanco, guardará null en la BD
+                cliente.Direccion = string.IsNullOrWhiteSpace(direccion) ? null : direccion.Trim();
+
+                _context.Update(cliente);
+                await _context.SaveChangesAsync();
+
+                TempData["Mensaje"] = "Dirección actualizada correctamente.";
+                TempData["TipoMensaje"] = "success";
+            }
+
+            return RedirectToAction(nameof(Details), new { id = id });
         }
 
         [HttpPost]
