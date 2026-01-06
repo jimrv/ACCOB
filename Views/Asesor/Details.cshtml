@@ -17,7 +17,7 @@
                 <div class="card-body">
                     <div class="text-center mb-4">
                         <i class="bi bi-person-badge display-4 text-primary"></i>
-                        <h3 class="mt-2 h4">@Model.Nombre</h3>
+                        <h3 class="mt-2 h4">@Model.NombreCompleto</h3>
                         <span class="badge p-2 @(Model.Estado == "Cerrado" ? "bg-success" : (Model.Estado == "En Gestión" ? "bg-info text-dark" : "bg-warning text-dark"))">
                             Estado: @Model.Estado
                         </span>

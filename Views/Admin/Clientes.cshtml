@@ -142,7 +142,7 @@
                                             zonaPeru).ToString("dd/MM/yyyy HH:mm")
                                 </td>
                                 <td><strong>@cliente.Dni</strong></td>
-                                <td>@cliente.Nombre</td>
+                                <td>@cliente.NombreCompleto</td>
                                 <td>
                                     <div class="small"><i class="bi bi-envelope"></i> @cliente.Email</div>
                                     <div class="small"><i class="bi bi-telephone"></i> @cliente.Telefono</div>
@@ -317,7 +317,7 @@
         function verHistorial(clienteId) {
             const clientesData = @Json.Serialize(Model.Clientes.Select(c => new {
                 id = c.Id,
-                nombre = c.Nombre,
+                nombre = c.NombreCompleto,
                 venta = c.Ventas.OrderByDescending(v => v.FechaVenta).Select(v => new {
                     zona = v.ZonaNombre,
                     plan = v.PlanNombre,

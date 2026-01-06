@@ -30,7 +30,7 @@ namespace ACCOB.Controllers
             _userManager = userManager;
         }
 
-        // 1. DASHBOARD: Solo estadísticas rápidas
+        // 1. DASHBOARD: Estadísticas y últimos clientes
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -44,16 +44,14 @@ namespace ACCOB.Controllers
             {
                 TotalClientes = await query.CountAsync(),
                 ClientesPendientes = await query.CountAsync(c => c.Estado == "Pendiente"),
-                ClientesEnGestion = await query.CountAsync(c => c.Estado == "En Gestión"), // Nuevo estado
-                ClientesCerrados = await query.CountAsync(c => c.Estado == "Cerrado"),     // Nuevo estado
+                ClientesEnGestion = await query.CountAsync(c => c.Estado == "En Gestión"),
+                ClientesCerrados = await query.CountAsync(c => c.Estado == "Cerrado"),
 
-                // Últimos clientes asignados
+                // Los clientes cargados aquí ya podrán usar .NombreCompleto en la vista
                 Clientes = await query.OrderByDescending(c => c.FechaRegistro).Take(5).ToListAsync(),
 
-                // Notificación: Clientes asignados hoy que siguen en "Pendiente"
                 NuevasAsignacionesHoy = await query.CountAsync(c => c.FechaRegistro >= hoy && c.Estado == "Pendiente"),
 
-                // Notificación: Llamadas programadas para hoy
                 RecordatoriosHoy = await _context.RegistroLlamadas
                     .Include(r => r.Cliente)
                     .Where(r => r.AsesorId == userId &&
@@ -66,7 +64,7 @@ namespace ACCOB.Controllers
             return View(model);
         }
 
-        // 2. LISTADO: Vista dedicada para buscar y filtrar todos los clientes
+        // 2. LISTADO: Buscador actualizado para Nombres y Apellidos
         [HttpGet]
         public async Task<IActionResult> Listado(string buscar, string estado)
         {
@@ -75,12 +73,17 @@ namespace ACCOB.Controllers
 
             if (!string.IsNullOrEmpty(buscar))
             {
-                query = query.Where(c => c.Dni.Contains(buscar) || c.Nombre.Contains(buscar) || c.Telefono.Contains(buscar));
+                var b = buscar.ToLower().Trim();
+                // Buscamos coincidencia en DNI, Nombre o Apellido
+                query = query.Where(c => c.Dni.Contains(b) 
+                                      || c.Nombre.ToLower().Contains(b) 
+                                      || c.Apellido.ToLower().Contains(b));
             }
 
             if (!string.IsNullOrEmpty(estado))
             {
-                query = query.Where(c => c.Estado == estado);
+                // Normalización de estado para que funcione con "En Gestión"
+                query = query.Where(c => c.Estado.ToLower() == estado.ToLower().Trim());
             }
 
             var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
@@ -91,7 +94,7 @@ namespace ACCOB.Controllers
             return View(clientes);
         }
 
-        // 3. DETALLE: Ver información completa de un cliente
+        // 3. DETALLE: Ver expediente completo
         [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
@@ -103,16 +106,13 @@ namespace ACCOB.Controllers
                 .Include(c => c.Ventas)
                 .FirstOrDefaultAsync(m => m.Id == id && m.AsesorId == userId);
 
-
             if (cliente == null) return NotFound();
 
-            // Cargamos las zonas para el primer Select
             ViewBag.Zonas = await _context.Zonas.ToListAsync();
 
             return View(cliente);
         }
 
-        // Obtiene los planes filtrados por la zona seleccionada
         [HttpGet]
         public async Task<JsonResult> GetPlanesPorZona(int zonaId)
         {
@@ -139,14 +139,12 @@ namespace ACCOB.Controllers
             return Json(tarifas);
         }
 
-        // Registrar una llamada para un cliente específico
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RegistrarLlamada(int clienteId, string resultado, string observaciones, DateTime? proximaLlamada, int? tarifaId)
         {
             var userId = _userManager.GetUserId(User);
 
-            // FIX: Convertir la fecha a UTC
             DateTime? fechaRecordatorio = null;
             if (proximaLlamada.HasValue)
             {
@@ -174,10 +172,8 @@ namespace ACCOB.Controllers
                     {
                         cliente.Estado = "Cerrado";
 
-                        // --- NUEVA LÓGICA PARA PLAN WIN ---
                         if (tarifaId.HasValue)
                         {
-                            // Buscamos la información completa de la tarifa elegida
                             var tarifa = await _context.TarifasPlan
                                 .Include(t => t.Plan)
                                 .ThenInclude(p => p.Zona)
@@ -219,7 +215,6 @@ namespace ACCOB.Controllers
             return RedirectToAction(nameof(Details), new { id = clienteId });
         }
 
-        // 4. ACCIÓN: Cambiar estado a cerrado (desde la vista de detalle)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CompletarCliente(int id)

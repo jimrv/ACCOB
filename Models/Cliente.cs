@@ -17,6 +17,14 @@ namespace ACCOB.Models
         [StringLength(100, ErrorMessage = "El nombre es muy largo")]
         public string Nombre { get; set; }
 
+        [Required(ErrorMessage = "El apellido es obligatorio")]
+        [StringLength(100, ErrorMessage = "El apellido es muy largo")]
+        public string Apellido { get; set; }
+
+        // PROPIEDAD CALCULADA: para mostrar ambos juntos
+        [NotMapped]
+        public string NombreCompleto => $"{Nombre} {Apellido}";
+
         [Required(ErrorMessage = "El correo es obligatorio")]
         [EmailAddress(ErrorMessage = "Formato de correo inválido")]
         public string Email { get; set; }
