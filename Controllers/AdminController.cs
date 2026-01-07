@@ -297,6 +297,45 @@ namespace ACCOB.Controllers
             return t;
         }
 
+        // POST: Eliminar Clientes Masivo
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarClientesMasivo(int[] clientesSeleccionados)
+        {
+            if (clientesSeleccionados == null || clientesSeleccionados.Length == 0)
+            {
+                TempData["Mensaje"] = "No seleccionaste ningún cliente para eliminar.";
+                TempData["TipoMensaje"] = "warning";
+                return RedirectToAction(nameof(Clientes));
+            }
+
+            try
+            {
+                // Obtenemos los clientes de la base de datos
+                var clientes = await _context.Clientes
+                    .Where(c => clientesSeleccionados.Contains(c.Id))
+                    .ToListAsync();
+
+                if (clientes.Any())
+                {
+                    int cantidad = clientes.Count;
+                    _context.Clientes.RemoveRange(clientes);
+                    await _context.SaveChangesAsync();
+
+                    TempData["Mensaje"] = $"Éxito: Se eliminaron {cantidad} clientes correctamente.";
+                    TempData["TipoMensaje"] = "success";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar clientes masivamente");
+                TempData["Mensaje"] = "Ocurrió un error técnico al intentar eliminar los registros.";
+                TempData["TipoMensaje"] = "danger";
+            }
+
+            return RedirectToAction(nameof(Clientes));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarCliente(int id)

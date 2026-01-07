@@ -79,7 +79,8 @@
     </div>
 
     @* --- TABLA Y ACCIÓN MASIVA --- *@
-    <form id="bulkAssignForm" asp-action="AsignarAsesorMasivo" method="post">
+    @* Se mantiene bulkAssignForm; el action se cambia vía JS según el botón presionado *@
+    <form id="bulkAssignForm" method="post">
         @Html.AntiForgeryToken()
 
         @* Barra de Acción Masiva *@
@@ -90,19 +91,24 @@
                         <i class="bi bi-check-all"></i>
                         <span id="contadorSeleccionados" class="badge bg-primary">0</span> Seleccionados:
                     </span>
-                    <select name="asesorId" id="bulkAsesorId" class="form-select form-select-sm" style="width: 250px;"
-                        required>
-                        <option value="">-- Seleccionar Asesor Destino --</option>
+                    <select name="asesorId" id="bulkAsesorId" class="form-select form-select-sm" style="width: 200px;">
+                        <option value="">-- Asignar Asesor --</option>
                         @foreach (var asesor in (SelectList)ViewBag.Asesores)
                         {
                             <option value="@asesor.Value">@asesor.Text</option>
                         }
                     </select>
                     <button type="button" onclick="confirmarAsignacionMasiva()" class="btn btn-primary btn-sm">
-                        Asignar Seleccionados
+                        Asignar Asesor
+                    </button>
+
+                    <div class="vr mx-2"></div>
+
+                    <button type="button" onclick="confirmarEliminacionMasiva()" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Eliminar Seleccionados
                     </button>
                 </div>
-                <small class="text-muted">Selecciona los clientes en la tabla para asignarlos de golpe.</small>
+                <small class="text-muted">Gestión rápida para múltiples registros.</small>
             </div>
         </div>
 
@@ -113,8 +119,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th style="width: 40px;">
-                                    <input type="checkbox" id="selectAll" class="form-check-input"
-                                        title="Seleccionar todos" />
+                                    <input type="checkbox" id="selectAll" class="form-check-input" title="Seleccionar todos" />
                                 </th>
                                 <th>Fecha Reg.</th>
                                 <th>DNI</th>
@@ -130,61 +135,51 @@
                         <tbody>
                             @if (Model.Clientes != null && Model.Clientes.Any())
                             {
-                                @foreach (var cliente in Model.Clientes)
+                                foreach (var cliente in Model.Clientes)
                                 {
                                     <tr>
                                         <td>
-                                            <input type="checkbox" name="clientesSeleccionados" value="@cliente.Id"
-                                                class="form-check-input client-checkbox" />
+                                            <input type="checkbox" name="clientesSeleccionados" value="@cliente.Id" class="form-check-input client-checkbox" />
                                         </td>
                                         <td>
-                                            @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro,
-                                            zonaPeru).ToString("dd/MM/yyyy HH:mm")
-                                </td>
-                                <td><strong>@cliente.Dni</strong></td>
-                                <td>@cliente.NombreCompleto</td>
-                                <td>
-                                    <div class="small"><i class="bi bi-envelope"></i> @cliente.Email</div>
-                                    <div class="small"><i class="bi bi-telephone"></i> @cliente.Telefono</div>
-                                    
-                                </td>
-                                <td>
-                                    <div class="small fw-bold"><i class="bi bi-geo-alt"></i> @cliente.Distrito, @cliente.Provincia</div>
-                                    <div class="text-muted" style="font-size: 0.75rem;">@cliente.Direccion</div>
-                                </td>
-                                <td>
-                                    <span class="badge @(cliente.Estado == "Cerrado" ? "bg-success" : 
-                                                        cliente.Estado == "En Gestión" ? "bg-info text-dark" : 
-                                                        "bg-warning text-dark")">
-                                        @cliente.Estado
-                                    </span>
-                                </td>
-                                <td>
-                                    @* Select individual (mantiene el onchange para cambios rápidos) *@
-                                    <select class="form-select form-select-sm"
-                                        onchange="asignarIndividual(@cliente.Id, this.value)">
-                                        <option value="">-- Sin asignar --</option>
-                                        @foreach (var asesor in (SelectList)ViewBag.Asesores)
+                                            @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro, zonaPeru).ToString("dd/MM/yyyy HH:mm")
+                                        </td>
+                                        <td><strong>@cliente.Dni</strong></td>
+                                        <td>@cliente.NombreCompleto</td>
+                                        <td>
+                                            <div class="small"><i class="bi bi-envelope"></i> @cliente.Email</div>
+                                            <div class="small"><i class="bi bi-telephone"></i> @cliente.Telefono</div>
+                                        </td>
+                                        <td>
+                                            <div class="small fw-bold"><i class="bi bi-geo-alt"></i> @cliente.Distrito, @cliente.Provincia</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">@cliente.Direccion</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(cliente.Estado == "Cerrado" ? "bg-success" : 
+                                                                cliente.Estado == "En Gestión" ? "bg-info text-dark" : 
+                                                                "bg-warning text-dark")">
+                                                @cliente.Estado
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm" onchange="asignarIndividual(@cliente.Id, this.value)">
+                                                <option value="">-- Sin asignar --</option>
+                                                @foreach (var asesor in (SelectList)ViewBag.Asesores)
                                                 {
-                                                    <!option value="@asesor.Value" @(cliente.AsesorId == asesor.Value ? "selected" :
-                                                                                                                               "")>
+                                                    <!option value="@asesor.Value" @(cliente.AsesorId == asesor.Value ? "selected" : "")>
                                                         @asesor.Text
                                                     </!option>
                                                 }
                                             </select>
                                         </td>
-                                        <td><button type="button" class="btn btn-sm btn-outline-info"
-                                                onclick="verHistorial(@cliente.Id)" title="Ver Historial">
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="verHistorial(@cliente.Id)" title="Ver Historial">
                                                 <i class="bi bi-eye"></i>
                                             </button>
                                         </td>
                                         <td class="text-center">
                                             <div class="btn-group">
-                                                <a href="#" class="btn btn-sm btn-outline-primary" title="Editar">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                                    onclick="eliminarCliente(@cliente.Id, '@cliente.Nombre')" title="Eliminar">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarCliente(@cliente.Id, '@cliente.NombreCompleto')" title="Eliminar">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
@@ -195,7 +190,7 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="10" class="text-center text-muted py-4">
                                         <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron clientes
                                     </td>
                                 </tr>
@@ -234,8 +229,7 @@
                 <h5 class="modal-title"><i class="bi bi-clock-history"></i> Historial de Gestiones</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="contenidoHistorial">
-            </div>
+            <div class="modal-body" id="contenidoHistorial"></div>
         </div>
     </div>
 </div>
@@ -257,18 +251,11 @@
         function actualizarContador() {
             const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
             contador.innerText = seleccionados;
-
-            if (seleccionados > 0) {
-                contador.classList.replace('bg-secondary', 'bg-primary');
-            } else {
-                contador.classList.replace('bg-primary', 'bg-secondary');
-            }
+            contador.className = seleccionados > 0 ? 'badge bg-primary' : 'badge bg-secondary';
         }
 
         selectAll.addEventListener('change', function () {
-            checkboxes.forEach(cb => {
-                cb.checked = this.checked;
-            });
+            checkboxes.forEach(cb => cb.checked = this.checked);
             actualizarContador();
         });
 
@@ -276,26 +263,29 @@
             cb.addEventListener('change', actualizarContador);
         });
 
-        // 3. Alerta de Confirmación Masiva
+        // 3. Acciones Masivas (Asignar y Eliminar)
         function confirmarAsignacionMasiva() {
             const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
             const asesorSelect = document.getElementById('bulkAsesorId');
-            const nombreAsesor = asesorSelect.options[asesorSelect.selectedIndex].text;
 
-            if (seleccionados === 0) {
-                alert("Por favor, selecciona al menos un cliente de la lista.");
-                return;
+            if (seleccionados === 0) { alert("Selecciona al menos un cliente."); return; }
+            if (asesorSelect.value === "") { alert("Selecciona el asesor destino."); return; }
+
+            if (confirm(`¿Asignar ${seleccionados} clientes a ${asesorSelect.options[asesorSelect.selectedIndex].text}?`)) {
+                const form = document.getElementById('bulkAssignForm');
+                form.action = '@Url.Action("AsignarAsesorMasivo")';
+                form.submit();
             }
+        }
 
-            if (asesorSelect.value === "") {
-                alert("Por favor, selecciona el asesor al que deseas asignar los clientes.");
-                return;
-            }
+        function confirmarEliminacionMasiva() {
+            const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
+            if (seleccionados === 0) { alert("Selecciona al menos un cliente."); return; }
 
-            const mensaje = `¿Estás seguro de asignar ${seleccionados} cliente(s) al asesor "${nombreAsesor}"?`;
-
-            if (confirm(mensaje)) {
-                document.getElementById('bulkAssignForm').submit();
+            if (confirm(`¡ATENCIÓN! ¿Estás seguro de eliminar permanentemente a ${seleccionados} clientes? Esta acción no se puede deshacer.`)) {
+                const form = document.getElementById('bulkAssignForm');
+                form.action = '@Url.Action("EliminarClientesMasivo")';
+                form.submit();
             }
         }
 
@@ -307,79 +297,46 @@
         }
 
         function eliminarCliente(id, nombre) {
-            if (confirm(`¿Estás seguro de que deseas eliminar al cliente ${nombre}?`)) {
+            if (confirm(`¿Eliminar permanentemente al cliente ${nombre}?`)) {
                 document.getElementById('deleteClienteId').value = id;
                 document.getElementById('formEliminarCliente').submit();
             }
         }
 
-        // 5. Función de Historial con BARRA DE MOVIMIENTO (MODIFICADA)
+        // 5. Historial con Scroll
         function verHistorial(clienteId) {
             const clientesData = @Json.Serialize(Model.Clientes.Select(c => new {
                 id = c.Id,
                 nombre = c.NombreCompleto,
                 venta = c.Ventas.OrderByDescending(v => v.FechaVenta).Select(v => new {
-                    zona = v.ZonaNombre,
-                    plan = v.PlanNombre,
-                    velocidad = v.VelocidadContratada,
-                    precio = v.PrecioFinal
+                    zona = v.ZonaNombre, plan = v.PlanNombre, velocidad = v.VelocidadContratada, precio = v.PrecioFinal
                 }).FirstOrDefault(),
                 llamadas = c.Llamadas.Select(ll => new {
-                    fechaLlamada = ll.FechaLlamada,
-                    resultado = ll.Resultado,
-                    observaciones = ll.Observaciones,
+                    fechaLlamada = ll.FechaLlamada, resultado = ll.Resultado, observaciones = ll.Observaciones,
                     nombreAsesor = ll.Asesor != null ? ll.Asesor.Nombre : "Sistema"
                 }).ToList()
             }));
 
             const cliente = clientesData.find(c => c.id === clienteId);
-            
             let html = `<h6>Cliente: <strong>${cliente.nombre}</strong></h6><hr>`;
             
             if (cliente.llamadas && cliente.llamadas.length > 0) {
-                // AGREGADO: max-height y overflow-y para la barra de movimiento
                 html += `<div class="table-responsive" style="max-height: 500px; overflow-y: auto; border: 1px solid #dee2e6;">
                             <table class="table table-sm table-striped mb-0">
-                                <thead class="table-light sticky-top" style="z-index: 10;">
+                                <thead class="table-light sticky-top">
                                     <tr class="small">
-                                        <th>Fecha</th>
-                                        <th>Asesor</th> 
-                                        <th>Resultado</th>
-                                        <th>Detalles / Observaciones</th>
+                                        <th>Fecha</th><th>Asesor</th><th>Resultado</th><th>Observaciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>`;
                 
-                const llamadasOrdenadas = cliente.llamadas.sort((a, b) => new Date(b.fechaLlamada) - new Date(a.fechaLlamada));
-                
-                llamadasOrdenadas.forEach(ll => {
+                cliente.llamadas.sort((a, b) => new Date(b.fechaLlamada) - new Date(a.fechaLlamada)).forEach(ll => {
                     const fecha = new Date(ll.fechaLlamada).toLocaleString('es-PE');
-                    
-                    let infoPlan = "";
-                    if (ll.resultado === "Venta Cerrada" && cliente.venta) {
-                        infoPlan = `
-                            <div class="mt-2 p-2 border-start border-4 border-success bg-white shadow-sm rounded">
-                                <small class="d-block text-success fw-bold text-uppercase" style="font-size: 0.7rem;">
-                                    <i class="bi bi-cart-check-fill"></i> Plan Contratado
-                                </small>
-                                <div class="row g-0 mt-1" style="font-size: 0.85rem;">
-                                    <div class="col-12"><strong>Zona:</strong> ${cliente.venta.zona}</div>
-                                    <div class="col-12"><strong>Plan:</strong> ${cliente.venta.plan}</div>
-                                    <div class="col-12"><strong>Tarifa:</strong> ${cliente.venta.velocidad} - 
-                                        <span class="text-success fw-bold">S/ ${cliente.venta.precio.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>`;
-                    }
-
                     html += `<tr class="small">
                                 <td class="text-nowrap">${fecha}</td>
                                 <td class="fw-bold text-primary">${ll.nombreAsesor}</td> 
                                 <td><span class="badge bg-light text-dark border">${ll.resultado}</span></td>
-                                <td>
-                                    ${infoPlan}
-                                    <div class="mt-1 text-muted">${ll.observaciones || '-'}</div>
-                                </td>
+                                <td>${ll.observaciones || '-'}</td>
                             </tr>`;
                 });
                 html += `</tbody></table></div>`;
@@ -388,8 +345,7 @@
             }
             
             document.getElementById('contenidoHistorial').innerHTML = html;
-            var myModal = new bootstrap.Modal(document.getElementById('modalHistorial'));
-            myModal.show();
+            new bootstrap.Modal(document.getElementById('modalHistorial')).show();
         }
     </script>
 }
