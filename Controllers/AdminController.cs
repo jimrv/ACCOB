@@ -34,6 +34,7 @@ namespace ACCOB.Controllers
             _logger = logger;
         }
 
+        // GET: Panel principal
         public async Task<IActionResult> Index()
         {
             var model = new AdminDashboardViewModel
@@ -47,6 +48,7 @@ namespace ACCOB.Controllers
             return View(model);
         }
 
+        // --- MÉTODOS DE ASESORES ---
         public IActionResult CrearAsesor() => View();
 
         [HttpPost]
@@ -93,9 +95,7 @@ namespace ACCOB.Controllers
             if (id == null) return NotFound();
             var usuario = await _userManager.FindByIdAsync(id);
             if (usuario == null) return NotFound();
-
-            var model = new EditarAsesorViewModel { Id = usuario.Id, Nombre = usuario.Nombre, Dni = usuario.Dni, Celular = usuario.Celular };
-            return View(model);
+            return View(new EditarAsesorViewModel { Id = usuario.Id, Nombre = usuario.Nombre, Dni = usuario.Dni, Celular = usuario.Celular });
         }
 
         [HttpPost]
@@ -110,15 +110,12 @@ namespace ACCOB.Controllers
                 var usuarioConMismoDni = await _userManager.FindByNameAsync(model.Dni);
                 if (usuarioConMismoDni != null && usuarioConMismoDni.Id != user.Id)
                 {
-                    ModelState.AddModelError("Dni", "Este DNI ya está registrado por otro usuario.");
+                    ModelState.AddModelError("Dni", "Este DNI ya está registrado.");
                     return View(model);
                 }
 
-                user.Nombre = model.Nombre;
-                user.Dni = model.Dni;
-                user.UserName = model.Dni;
-                user.Celular = model.Celular;
-                user.PhoneNumber = model.Celular;
+                user.Nombre = model.Nombre; user.Dni = model.Dni; user.UserName = model.Dni;
+                user.Celular = model.Celular; user.PhoneNumber = model.Celular;
 
                 var result = await _userManager.UpdateAsync(user);
                 if (result.Succeeded)
@@ -128,33 +125,15 @@ namespace ACCOB.Controllers
                         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
                         await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
                     }
-                    TempData["Mensaje"] = $"Asesor {model.Nombre} actualizado correctamente.";
+                    TempData["Mensaje"] = "Asesor actualizado.";
                     TempData["TipoMensaje"] = "success";
                     return RedirectToAction(nameof(Usuarios));
                 }
-                foreach (var error in result.Errors) ModelState.AddModelError(string.Empty, error.Description);
             }
             return View(model);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarUsuario(string id)
-        {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null) return NotFound();
-            if (user.UserName == User.Identity.Name)
-            {
-                TempData["Mensaje"] = "No puedes eliminar tu propia cuenta.";
-                TempData["TipoMensaje"] = "warning";
-                return RedirectToAction(nameof(Usuarios));
-            }
-            await _userManager.DeleteAsync(user);
-            TempData["Mensaje"] = "Usuario eliminado exitosamente.";
-            TempData["TipoMensaje"] = "success";
-            return RedirectToAction(nameof(Usuarios));
-        }
-
+        // --- GESTIÓN DE CLIENTES ---
         public async Task<IActionResult> CrearCliente()
         {
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
@@ -168,20 +147,16 @@ namespace ACCOB.Controllers
         {
             if (ModelState.IsValid)
             {
-                // Limpieza de prefijo "51" manual
                 cliente.Telefono = LimpiarTelefono(cliente.Telefono);
                 cliente.NumRef1 = LimpiarTelefono(cliente.NumRef1);
                 cliente.NumRef2 = LimpiarTelefono(cliente.NumRef2);
-
                 cliente.FechaRegistro = DateTime.UtcNow;
                 _context.Add(cliente);
                 await _context.SaveChangesAsync();
-                TempData["Mensaje"] = "Cliente creado exitosamente";
+                TempData["Mensaje"] = "Cliente creado.";
                 TempData["TipoMensaje"] = "success";
                 return RedirectToAction("Clientes");
             }
-            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
-            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
             return View(cliente);
         }
 
@@ -189,8 +164,7 @@ namespace ACCOB.Controllers
         {
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
             ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
-
-            var query = _context.Clientes.Include(c => c.Asesor).Include(c => c.Ventas).Include(c => c.Llamadas).ThenInclude(l => l.Asesor).AsQueryable();
+            var query = _context.Clientes.Include(c => c.Asesor).Include(c => c.Ventas).AsQueryable();
 
             if (!string.IsNullOrEmpty(nombre))
             {
@@ -198,43 +172,20 @@ namespace ACCOB.Controllers
                 query = query.Where(c => c.Nombre.ToLower().Contains(n) || c.Apellido.ToLower().Contains(n) || c.Dni.Contains(n));
             }
             if (!string.IsNullOrEmpty(estado)) query = query.Where(c => c.Estado == estado);
-            if (!string.IsNullOrEmpty(asesorId)) query = (asesorId == "sin_asignar") ? query.Where(c => c.AsesorId == null) : query.Where(c => c.AsesorId == asesorId);
             if (!string.IsNullOrEmpty(provincia)) query = query.Where(c => c.Provincia.Contains(provincia));
             if (!string.IsNullOrEmpty(distrito)) query = query.Where(c => c.Distrito.Contains(distrito));
-            if (fechaInicio.HasValue) query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
-            if (fechaFin.HasValue) query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
 
-            return View(new ClienteListViewModel { Clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync(), Nombre = nombre, Estado = estado, AsesorId = asesorId, FechaInicio = fechaInicio, FechaFin = fechaFin, Provincia = provincia, Distrito = distrito });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AsignarAsesor(int clienteId, string asesorId)
-        {
-            var cliente = await _context.Clientes.FindAsync(clienteId);
-            if (cliente != null)
+            return View(new ClienteListViewModel
             {
-                cliente.AsesorId = string.IsNullOrEmpty(asesorId) ? null : asesorId;
-                await _context.SaveChangesAsync();
-                TempData["Mensaje"] = "Asesor actualizado.";
-                TempData["TipoMensaje"] = "success";
-            }
-            return RedirectToAction(nameof(Clientes));
+                Clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync(),
+                Nombre = nombre,
+                Estado = estado,
+                Provincia = provincia,
+                Distrito = distrito
+            });
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AsignarAsesorMasivo(string asesorId, int[] clientesSeleccionados)
-        {
-            if (clientesSeleccionados == null || clientesSeleccionados.Length == 0) return RedirectToAction(nameof(Clientes));
-            var clientes = await _context.Clientes.Where(c => clientesSeleccionados.Contains(c.Id)).ToListAsync();
-            foreach (var cliente in clientes) cliente.AsesorId = string.IsNullOrEmpty(asesorId) ? null : asesorId;
-            await _context.SaveChangesAsync();
-            TempData["Mensaje"] = $"Se actualizaron {clientes.Count} clientes.";
-            TempData["TipoMensaje"] = "success";
-            return RedirectToAction(nameof(Clientes));
-        }
-
-        // IMPORTACIÓN FLEXIBLE POR NOMBRE DE COLUMNA Y LIMPIEZA DE "51"
+        // --- IMPORTACIÓN MASIVA OPTIMIZADA (85K) ---
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ImportarClientes(IFormFile archivoExcel)
@@ -243,6 +194,10 @@ namespace ACCOB.Controllers
 
             try
             {
+                // 1. Cargar DNI existentes de la base de datos para omitirlos instantáneamente
+                var dnisExistentes = await _context.Clientes.Select(c => c.Dni).ToHashSetAsync();
+                var dnisEnArchivo = new HashSet<string>();
+
                 using var stream = new MemoryStream();
                 await archivoExcel.CopyToAsync(stream);
                 using var workbook = new XLWorkbook(stream);
@@ -254,7 +209,7 @@ namespace ACCOB.Controllers
                 for (int i = 1; i <= hoja.LastColumnUsed().ColumnNumber(); i++)
                 {
                     string h = primeraFila.Cell(i).GetValue<string>().Trim().ToLower();
-                    if (h.Contains("dni")) colDni = i;
+                    if (h == "dni") colDni = i;
                     else if (h.Contains("nombre")) colNom = i;
                     else if (h.Contains("apellido")) colApe = i;
                     else if (h.Contains("email") || h.Contains("correo")) colEmail = i;
@@ -263,7 +218,7 @@ namespace ACCOB.Controllers
                     else if (h.Contains("prov")) colProv = i;
                     else if (h.Contains("dist")) colDist = i;
                     else if (h.Contains("dir")) colDir = i;
-                    else if (h.Contains("ref1")) colRef1 = i;
+                    else if (h.Contains("ref1") || h.Contains("referencia")) colRef1 = i;
                     else if (h.Contains("ref2")) colRef2 = i;
                 }
 
@@ -272,75 +227,74 @@ namespace ACCOB.Controllers
 
                 foreach (var fila in filas)
                 {
-                    string dni = colDni > 0 ? fila.Cell(colDni).GetValue<string>().Trim() : "";
-                    string nombre = colNom > 0 ? fila.Cell(colNom).GetValue<string>().Trim() : "";
-                    string apellido = colApe > 0 ? fila.Cell(colApe).GetValue<string>().Trim() : "";
-                    if (string.IsNullOrEmpty(dni) || string.IsNullOrEmpty(nombre)) continue;
+                    string Leer(int col)
+                    {
+                        if (col <= 0) return "";
+                        string val = fila.Cell(col).GetValue<string>().Trim();
+                        return (val == "\\N" || string.IsNullOrEmpty(val)) ? "" : val;
+                    }
+
+                    string dni = Leer(colDni);
+                    string nombre = Leer(colNom);
+
+                    // OMITIR SI: DNI vacío, ya existe en BD, o está repetido en el mismo Excel
+                    if (string.IsNullOrEmpty(dni) || string.IsNullOrEmpty(nombre) ||
+                        dnisExistentes.Contains(dni) || dnisEnArchivo.Contains(dni)) continue;
+
+                    dnisEnArchivo.Add(dni);
 
                     clientesParaInsertar.Add(new Cliente
                     {
                         Dni = dni,
                         Nombre = nombre,
-                        Apellido = apellido,
-                        Email = colEmail > 0 ? fila.Cell(colEmail).GetValue<string>().Trim() : "sin@correo.com",
-                        Telefono = LimpiarTelefono(colTel > 0 ? fila.Cell(colTel).GetValue<string>().Trim() : ""),
-                        Departamento = colDep > 0 ? fila.Cell(colDep).GetValue<string>().Trim() : "LIMA",
-                        Provincia = colProv > 0 ? fila.Cell(colProv).GetValue<string>().Trim() : "LIMA",
-                        Distrito = colDist > 0 ? fila.Cell(colDist).GetValue<string>().Trim() : "",
-                        Direccion = colDir > 0 ? fila.Cell(colDir).GetValue<string>().Trim() : null,
-                        NumRef1 = LimpiarTelefono(colRef1 > 0 ? fila.Cell(colRef1).GetValue<string>().Trim() : null),
-                        NumRef2 = LimpiarTelefono(colRef2 > 0 ? fila.Cell(colRef2).GetValue<string>().Trim() : null),
+                        Apellido = Leer(colApe),
+                        Email = !string.IsNullOrEmpty(Leer(colEmail)) ? Leer(colEmail) : "sin@correo.com",
+                        Telefono = LimpiarTelefono(Leer(colTel)),
+                        Departamento = !string.IsNullOrEmpty(Leer(colDep)) ? Leer(colDep) : "LIMA",
+                        Provincia = !string.IsNullOrEmpty(Leer(colProv)) ? Leer(colProv) : "LIMA",
+                        Distrito = Leer(colDist),
+                        Direccion = Leer(colDir),
+                        NumRef1 = LimpiarTelefono(Leer(colRef1)),
+                        NumRef2 = LimpiarTelefono(Leer(colRef2)),
                         Estado = "Pendiente",
                         FechaRegistro = DateTime.UtcNow
                     });
                 }
+
                 if (clientesParaInsertar.Count > 0)
                 {
-                    _context.Clientes.AddRange(clientesParaInsertar);
-                    await _context.SaveChangesAsync();
-                    TempData["Mensaje"] = $"Éxito: {clientesParaInsertar.Count} importados.";
+                    // Guardar en bloques de 1000 para evitar errores de memoria o timeout
+                    foreach (var chunk in clientesParaInsertar.Chunk(1000))
+                    {
+                        _context.Clientes.AddRange(chunk);
+                        await _context.SaveChangesAsync();
+                    }
+                    TempData["Mensaje"] = $"Éxito: Se importaron {clientesParaInsertar.Count} nuevos clientes.";
                     TempData["TipoMensaje"] = "success";
+                }
+                else
+                {
+                    TempData["Mensaje"] = "No se encontraron clientes nuevos para importar.";
+                    TempData["TipoMensaje"] = "warning";
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importar");
-                TempData["Mensaje"] = "Error al procesar archivo.";
+                TempData["Mensaje"] = "Error técnico: " + ex.Message;
                 TempData["TipoMensaje"] = "danger";
                 return RedirectToAction("CrearCliente");
             }
             return RedirectToAction(nameof(Clientes));
         }
 
-        public async Task<IActionResult> ExportarClientes(string? dni, string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
+        // --- UTILITARIOS ---
+        private string? LimpiarTelefono(string? tel)
         {
-            var query = _context.Clientes.Include(c => c.Asesor).Include(c => c.Ventas).Include(c => c.Llamadas).AsQueryable();
-            // ... (Filtros idénticos a los de la acción Clientes)
-            var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
-
-            using var workbook = new XLWorkbook();
-            var ws = workbook.Worksheets.Add("Reporte");
-            string[] headers = { "Fecha Reg", "DNI", "Cliente", "Teléfono", "Estado", "Asesor", "Zona", "Plan", "Precio", "Distrito", "Provincia" };
-            for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
-
-            int row = 2;
-            foreach (var c in clientes)
-            {
-                var dv = c.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
-                ws.Cell(row, 1).Value = c.FechaRegistro.ToLocalTime().ToString("g");
-                ws.Cell(row, 2).Value = c.Dni;
-                ws.Cell(row, 3).Value = c.NombreCompleto;
-                ws.Cell(row, 4).Value = c.Telefono;
-                ws.Cell(row, 5).Value = c.Estado;
-                ws.Cell(row, 6).Value = c.Asesor?.Nombre ?? "-";
-                if (dv != null) { ws.Cell(row, 7).Value = dv.ZonaNombre; ws.Cell(row, 8).Value = dv.PlanNombre; ws.Cell(row, 9).Value = dv.PrecioFinal; }
-                ws.Cell(row, 10).Value = c.Distrito; ws.Cell(row, 11).Value = c.Provincia;
-                row++;
-            }
-            ws.Columns().AdjustToContents();
-            using var s = new MemoryStream();
-            workbook.SaveAs(s);
-            return File(s.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Reporte.xlsx");
+            if (string.IsNullOrEmpty(tel)) return tel;
+            string t = tel.Trim();
+            if (t.StartsWith("51") && t.Length > 9) return t.Substring(2);
+            return t;
         }
 
         [HttpPost]
@@ -348,17 +302,8 @@ namespace ACCOB.Controllers
         public async Task<IActionResult> EliminarCliente(int id)
         {
             var cliente = await _context.Clientes.FindAsync(id);
-            if (cliente != null) { _context.Clientes.Remove(cliente); await _context.SaveChangesAsync(); TempData["Mensaje"] = "Cliente eliminado."; TempData["TipoMensaje"] = "success"; }
+            if (cliente != null) { _context.Clientes.Remove(cliente); await _context.SaveChangesAsync(); }
             return RedirectToAction(nameof(Clientes));
-        }
-
-        // FUNCIÓN PRIVADA REUTILIZABLE PARA LIMPIAR EL "51"
-        private string? LimpiarTelefono(string? tel)
-        {
-            if (string.IsNullOrEmpty(tel)) return tel;
-            string t = tel.Trim();
-            if (t.StartsWith("51") && t.Length > 9) return t.Substring(2);
-            return t;
         }
     }
 }
