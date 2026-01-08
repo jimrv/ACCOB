@@ -159,7 +159,7 @@ namespace ACCOB.Controllers
         public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito, DateTime? fechaGestionInicio, DateTime? fechaGestionFin, int pagina = 1)
         {
             int registrosPorPagina = 20; // Tú decides cuántos ver por vez
-            
+
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
             ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
 
@@ -192,8 +192,24 @@ namespace ACCOB.Controllers
                 query = query.Where(c => c.Llamadas.Any(l => l.FechaLlamada < fin));
             }
 
-            if (fechaInicio.HasValue) query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
-            if (fechaFin.HasValue) query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
+            // --- FILTRO DE REGISTRO: DESDE / HASTA ---
+            if (fechaInicio.HasValue)
+            {
+                // 1. Tomamos la fecha del calendario (00:00:00) y le asignamos Kind UTC
+                var inicio = DateTime.SpecifyKind(fechaInicio.Value.Date, DateTimeKind.Utc);
+                query = query.Where(c => c.FechaRegistro >= inicio);
+            }
+
+            if (fechaFin.HasValue)
+            {
+                // 2. Para el límite final, tomamos el día seleccionado, sumamos 1 día 
+                // y usamos el operador "Menor que" (<). Así capturamos todo el día hasta las 23:59:59
+                var fin = DateTime.SpecifyKind(fechaFin.Value.Date, DateTimeKind.Utc).AddDays(1);
+                query = query.Where(c => c.FechaRegistro < fin);
+            }
+
+            //if (fechaInicio.HasValue) query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
+            //if (fechaFin.HasValue) query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
 
             var model = new ClienteListViewModel
             {
@@ -415,11 +431,21 @@ namespace ACCOB.Controllers
             if (!string.IsNullOrEmpty(distrito))
                 query = query.Where(c => c.Distrito.Contains(distrito));
 
+            // --- FILTRO DE REGISTRO: DESDE / HASTA ---
             if (fechaInicio.HasValue)
-                query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
+            {
+                // 1. Tomamos la fecha del calendario (00:00:00) y le asignamos Kind UTC
+                var inicio = DateTime.SpecifyKind(fechaInicio.Value.Date, DateTimeKind.Utc);
+                query = query.Where(c => c.FechaRegistro >= inicio);
+            }
 
             if (fechaFin.HasValue)
-                query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
+            {
+                // 2. Para el límite final, tomamos el día seleccionado, sumamos 1 día 
+                // y usamos el operador "Menor que" (<). Así capturamos todo el día hasta las 23:59:59
+                var fin = DateTime.SpecifyKind(fechaFin.Value.Date, DateTimeKind.Utc).AddDays(1);
+                query = query.Where(c => c.FechaRegistro < fin);
+            }
 
             if (fechaGestionInicio.HasValue)
             {

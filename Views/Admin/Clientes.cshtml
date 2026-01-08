@@ -71,6 +71,7 @@
             </div>
 
             <div class="row g-3 align-items-end">
+                @* --- Fechas de Gestión --- *@
                 <div class="col-md-3">
                     <label class="form-label small fw-bold"><i class="bi bi-calendar-event"></i> Gestión Desde</label>
                     <input type="date" name="fechaGestionInicio" value="@(Model.FechaGestionInicio?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
@@ -78,6 +79,16 @@
                 <div class="col-md-3">
                     <label class="form-label small fw-bold"><i class="bi bi-calendar-check"></i> Gestión Hasta</label>
                     <input type="date" name="fechaGestionFin" value="@(Model.FechaGestionFin?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+                </div>
+
+                @* --- Fechas de Registro --- *@
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Registro Desde</label>
+                    <input type="date" name="fechaInicio" value="@(Model.FechaInicio?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Registro Hasta</label>
+                    <input type="date" name="fechaFin" value="@(Model.FechaFin?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
                 </div>
                 
                 <div class="col-md-2"></div>
@@ -163,7 +174,12 @@
                                             <input type="checkbox" name="clientesSeleccionados" value="@cliente.Id" class="form-check-input client-checkbox" />
                                         </td>
                                         <td>
-                                            @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro, zonaPeru).ToString("dd/MM/yyyy HH:mm")
+                                            @* Forzamos el Kind a UTC para evitar el error de TimeZoneInfo *@
+                                            @{
+                                                var fechaUtc = DateTime.SpecifyKind(cliente.FechaRegistro, DateTimeKind.Utc);
+                                                var fechaLocal = TimeZoneInfo.ConvertTimeFromUtc(fechaUtc, zonaPeru);
+                                            }
+                                            @fechaLocal.ToString("dd/MM/yyyy HH:mm")
                                         </td>
                                         <td><strong>@cliente.Dni</strong></td>
                                         <td>@cliente.NombreCompleto</td>
