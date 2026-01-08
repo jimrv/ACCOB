@@ -29,18 +29,19 @@
     </div>
 
     @* --- SECCIÓN DE FILTROS --- *@
-    <div class="card shadow mb-4">
-        <div class="card-header bg-light">
-            <h6 class="mb-0"><i class="bi bi-funnel"></i> Filtros de búsqueda</h6>
-        </div>
-        <div class="card-body">
-            <form id="filterForm" method="get" asp-action="Clientes" class="row g-3">
-                <div class="col-md-2">
-                    <label class="form-label small">Nombre/DNI</label>
-                    <input type="text" name="nombre" value="@Model.Nombre" class="form-control form-control-sm" />
+<div class="card shadow mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="bi bi-funnel"></i> Filtros de búsqueda</h6>
+    </div>
+    <div class="card-body">
+        <form id="filterForm" method="get" asp-action="Clientes">
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Nombre/DNI</label>
+                    <input type="text" name="nombre" value="@Model.Nombre" class="form-control form-control-sm" placeholder="Ej: 43776539..." />
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small">Estado</label>
+                    <label class="form-label small fw-bold">Estado</label>
                     <select name="estado" class="form-select form-select-sm">
                         <option value="">Todos</option>
                         <option value="Pendiente" selected="@(Model.Estado == "Pendiente")">Pendiente</option>
@@ -48,20 +49,18 @@
                         <option value="Cerrado" selected="@(Model.Estado == "Cerrado")">Cerrado</option>
                     </select>
                 </div>
-                
                 <div class="col-md-2">
-                    <label class="form-label small">Provincia</label>
+                    <label class="form-label small fw-bold">Provincia</label>
                     <input type="text" name="provincia" value="@Model.Provincia" class="form-control form-control-sm" placeholder="Buscar provincia..." />
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small">Distrito</label>
+                    <label class="form-label small fw-bold">Distrito</label>
                     <input type="text" name="distrito" value="@Model.Distrito" class="form-control form-control-sm" placeholder="Buscar distrito..." />
                 </div>
-
-                <div class="col-md-2">
-                    <label class="form-label small">Asesor</label>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Asesor</label>
                     <select name="asesorId" class="form-select form-select-sm">
-                        <option value="">Todos</option>
+                        <option value="">Todos los asesores</option>
                         <option value="sin_asignar" selected="@(Model.AsesorId == "sin_asignar")">-- Sin Asignar --</option>
                         @foreach (var item in (SelectList)ViewBag.Asesores)
                         {
@@ -69,25 +68,32 @@
                         }
                     </select>
                 </div>
+            </div>
 
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="form-label small">Gestión Desde</label>
-                        <input type="date" name="fechaGestionInicio" value="@(Model.FechaGestionInicio?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Gestión Hasta</label>
-                        <input type="date" name="fechaGestionFin" value="@(Model.FechaGestionFin?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
-                    </div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold"><i class="bi bi-calendar-event"></i> Gestión Desde</label>
+                    <input type="date" name="fechaGestionInicio" value="@(Model.FechaGestionInicio?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold"><i class="bi bi-calendar-check"></i> Gestión Hasta</label>
+                    <input type="date" name="fechaGestionFin" value="@(Model.FechaGestionFin?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
                 </div>
                 
-                <div class="col-md-2 d-flex align-items-end gap-1">
-                    <button type="submit" class="btn btn-dark btn-sm w-100"><i class="bi bi-search"></i> Filtrar</button>
-                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-x-circle"></i> Limpiar</a>
+                <div class="col-md-2"></div>
+
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark btn-sm w-100">
+                        <i class="bi bi-search"></i> Aplicar Filtros
+                    </button>
+                    <a asp-action="Clientes" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-x-circle"></i> Limpiar Campos
+                    </a>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
+</div>
 
     @* --- TABLA Y ACCIÓN MASIVA --- *@
     <form id="bulkActionForm" method="post">
