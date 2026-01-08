@@ -77,7 +77,8 @@ namespace ACCOB.Controllers
                 // Buscamos coincidencia en DNI, Nombre o Apellido
                 query = query.Where(c => c.Dni.Contains(b)
                                       || c.Nombre.ToLower().Contains(b)
-                                      || c.Apellido.ToLower().Contains(b));
+                                      || c.Apellido.ToLower().Contains(b)
+                                      || c.Telefono.Contains(b));
             }
 
             if (!string.IsNullOrEmpty(estado))
