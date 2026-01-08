@@ -12,6 +12,8 @@ namespace ACCOB.ViewModels
         public string? AsesorId { get; set; }
         public DateTime? FechaInicio { get; set; }
         public DateTime? FechaFin { get; set; }
+        public DateTime? FechaGestionInicio { get; set; }
+        public DateTime? FechaGestionFin { get; set; }
         public string? Provincia { get; set; }
         public string? Distrito { get; set; }
     }

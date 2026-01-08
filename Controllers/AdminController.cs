@@ -156,8 +156,7 @@ namespace ACCOB.Controllers
 
 
         // --- GESTIÓN DE CLIENTES ---
-
-        public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
+        public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito, DateTime? fechaGestionInicio, DateTime? fechaGestionFin)
         {
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
             ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
@@ -178,6 +177,19 @@ namespace ACCOB.Controllers
             if (!string.IsNullOrEmpty(provincia)) query = query.Where(c => c.Provincia.Contains(provincia));
             if (!string.IsNullOrEmpty(distrito)) query = query.Where(c => c.Distrito.Contains(distrito));
 
+            if (fechaGestionInicio.HasValue)
+            {
+                var inicio = fechaGestionInicio.Value.ToUniversalTime();
+                query = query.Where(c => c.Llamadas.Any(l => l.FechaLlamada >= inicio));
+            }
+
+            if (fechaGestionFin.HasValue)
+            {
+                // Sumamos un día para incluir todo el día final seleccionado
+                var fin = fechaGestionFin.Value.ToUniversalTime().AddDays(1);
+                query = query.Where(c => c.Llamadas.Any(l => l.FechaLlamada < fin));
+            }
+
             if (fechaInicio.HasValue) query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
             if (fechaFin.HasValue) query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
 
@@ -190,7 +202,9 @@ namespace ACCOB.Controllers
                 Provincia = provincia,
                 Distrito = distrito,
                 FechaInicio = fechaInicio,
-                FechaFin = fechaFin
+                FechaFin = fechaFin,
+                FechaGestionInicio = fechaGestionInicio,
+                FechaGestionFin = fechaGestionFin
             };
             return View(model);
         }
@@ -371,7 +385,7 @@ namespace ACCOB.Controllers
             return RedirectToAction(nameof(Clientes));
         }
 
-        public async Task<IActionResult> ExportarClientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
+        public async Task<IActionResult> ExportarClientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito, DateTime? fechaGestionInicio, DateTime? fechaGestionFin)
         {
             // 1. Iniciamos la consulta con las relaciones necesarias
             var query = _context.Clientes
@@ -404,6 +418,19 @@ namespace ACCOB.Controllers
 
             if (fechaFin.HasValue)
                 query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
+
+            if (fechaGestionInicio.HasValue)
+            {
+                var inicio = fechaGestionInicio.Value.ToUniversalTime();
+                query = query.Where(c => c.Llamadas.Any(l => l.FechaLlamada >= inicio));
+            }
+
+            if (fechaGestionFin.HasValue)
+            {
+                // Sumamos un día para incluir todo el día final seleccionado
+                var fin = fechaGestionFin.Value.ToUniversalTime().AddDays(1);
+                query = query.Where(c => c.Llamadas.Any(l => l.FechaLlamada < fin));
+            }
 
             // 3. Obtener la lista filtrada
             var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
