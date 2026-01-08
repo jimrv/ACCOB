@@ -156,8 +156,10 @@ namespace ACCOB.Controllers
 
 
         // --- GESTIÓN DE CLIENTES ---
-        public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito, DateTime? fechaGestionInicio, DateTime? fechaGestionFin)
+        public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito, DateTime? fechaGestionInicio, DateTime? fechaGestionFin, int pagina = 1)
         {
+            int registrosPorPagina = 20; // Tú decides cuántos ver por vez
+            
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
             ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
 
