@@ -34,7 +34,7 @@ namespace ACCOB.Controllers
             _logger = logger;
         }
 
-        // GET: Panel principal
+        // --- DASHBOARD ---
         public async Task<IActionResult> Index()
         {
             var model = new AdminDashboardViewModel
@@ -48,7 +48,10 @@ namespace ACCOB.Controllers
             return View(model);
         }
 
-        // --- MÉTODOS DE ASESORES ---
+        // --- GESTIÓN DE ASESORES (USUARIOS) ---
+
+        public IActionResult Usuarios() => View(_userManager.Users.ToList());
+
         public IActionResult CrearAsesor() => View();
 
         [HttpPost]
@@ -88,8 +91,6 @@ namespace ACCOB.Controllers
             return View(model);
         }
 
-        public IActionResult Usuarios() => View(_userManager.Users.ToList());
-
         public async Task<IActionResult> EditarAsesor(string id)
         {
             if (id == null) return NotFound();
@@ -107,15 +108,17 @@ namespace ACCOB.Controllers
                 var user = await _userManager.FindByIdAsync(model.Id);
                 if (user == null) return NotFound();
 
-                var usuarioConMismoDni = await _userManager.FindByNameAsync(model.Dni);
-                if (usuarioConMismoDni != null && usuarioConMismoDni.Id != user.Id)
+                var conMismoDni = await _userManager.FindByNameAsync(model.Dni);
+                if (conMismoDni != null && conMismoDni.Id != user.Id)
                 {
-                    ModelState.AddModelError("Dni", "Este DNI ya está registrado.");
+                    ModelState.AddModelError("Dni", "DNI ya registrado por otro usuario.");
                     return View(model);
                 }
 
-                user.Nombre = model.Nombre; user.Dni = model.Dni; user.UserName = model.Dni;
-                user.Celular = model.Celular; user.PhoneNumber = model.Celular;
+                user.Nombre = model.Nombre;
+                user.Dni = model.Dni;
+                user.UserName = model.Dni;
+                user.Celular = model.Celular;
 
                 var result = await _userManager.UpdateAsync(user);
                 if (result.Succeeded)
@@ -133,7 +136,65 @@ namespace ACCOB.Controllers
             return View(model);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarUsuario(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+            if (user.UserName == User.Identity.Name)
+            {
+                TempData["Mensaje"] = "No puedes eliminar tu cuenta.";
+                TempData["TipoMensaje"] = "warning";
+                return RedirectToAction(nameof(Usuarios));
+            }
+            await _userManager.DeleteAsync(user);
+            TempData["Mensaje"] = "Usuario eliminado.";
+            TempData["TipoMensaje"] = "success";
+            return RedirectToAction(nameof(Usuarios));
+        }
+
+
         // --- GESTIÓN DE CLIENTES ---
+
+        public async Task<IActionResult> Clientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
+        {
+            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
+            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
+
+            var query = _context.Clientes
+                .Include(c => c.Asesor)
+                .Include(c => c.Ventas)
+                .Include(c => c.Llamadas).ThenInclude(l => l.Asesor)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(nombre))
+            {
+                string n = nombre.ToLower().Trim();
+                query = query.Where(c => c.Nombre.ToLower().Contains(n) || c.Apellido.ToLower().Contains(n) || c.Dni.Contains(n));
+            }
+            if (!string.IsNullOrEmpty(estado)) query = query.Where(c => c.Estado == estado);
+            if (!string.IsNullOrEmpty(asesorId)) query = (asesorId == "sin_asignar") ? query.Where(c => c.AsesorId == null) : query.Where(c => c.AsesorId == asesorId);
+            if (!string.IsNullOrEmpty(provincia)) query = query.Where(c => c.Provincia.Contains(provincia));
+            if (!string.IsNullOrEmpty(distrito)) query = query.Where(c => c.Distrito.Contains(distrito));
+
+            if (fechaInicio.HasValue) query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
+            if (fechaFin.HasValue) query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
+
+            var model = new ClienteListViewModel
+            {
+                Clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync(),
+                Nombre = nombre,
+                Estado = estado,
+                AsesorId = asesorId,
+                Provincia = provincia,
+                Distrito = distrito,
+                FechaInicio = fechaInicio,
+                FechaFin = fechaFin
+            };
+            return View(model);
+        }
+
         public async Task<IActionResult> CrearCliente()
         {
             var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
@@ -153,48 +214,88 @@ namespace ACCOB.Controllers
                 cliente.FechaRegistro = DateTime.UtcNow;
                 _context.Add(cliente);
                 await _context.SaveChangesAsync();
-                TempData["Mensaje"] = "Cliente creado.";
+                TempData["Mensaje"] = "Cliente registrado.";
                 TempData["TipoMensaje"] = "success";
-                return RedirectToAction("Clientes");
+                return RedirectToAction(nameof(Clientes));
             }
+            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
+            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
             return View(cliente);
         }
 
-        public async Task<IActionResult> Clientes(string? dni, string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarAsesor(int clienteId, string? asesorId)
         {
-            var asesores = await _userManager.GetUsersInRoleAsync("Asesor");
-            ViewBag.Asesores = new SelectList(asesores, "Id", "Nombre");
-            var query = _context.Clientes.Include(c => c.Asesor).Include(c => c.Ventas).AsQueryable();
-
-            if (!string.IsNullOrEmpty(nombre))
+            var cliente = await _context.Clientes.FindAsync(clienteId);
+            if (cliente != null)
             {
-                string n = nombre.ToLower().Trim();
-                query = query.Where(c => c.Nombre.ToLower().Contains(n) || c.Apellido.ToLower().Contains(n) || c.Dni.Contains(n));
+                cliente.AsesorId = string.IsNullOrEmpty(asesorId) ? null : asesorId;
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = "Asignación actualizada.";
+                TempData["TipoMensaje"] = "success";
             }
-            if (!string.IsNullOrEmpty(estado)) query = query.Where(c => c.Estado == estado);
-            if (!string.IsNullOrEmpty(provincia)) query = query.Where(c => c.Provincia.Contains(provincia));
-            if (!string.IsNullOrEmpty(distrito)) query = query.Where(c => c.Distrito.Contains(distrito));
-
-            return View(new ClienteListViewModel
-            {
-                Clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync(),
-                Nombre = nombre,
-                Estado = estado,
-                Provincia = provincia,
-                Distrito = distrito
-            });
+            return RedirectToAction(nameof(Clientes));
         }
 
-        // --- IMPORTACIÓN MASIVA OPTIMIZADA (85K) ---
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarAsesorMasivo(string asesorId, int[] clientesSeleccionados)
+        {
+            if (clientesSeleccionados == null || clientesSeleccionados.Length == 0) return RedirectToAction(nameof(Clientes));
+            var clientes = await _context.Clientes.Where(c => clientesSeleccionados.Contains(c.Id)).ToListAsync();
+            foreach (var c in clientes) c.AsesorId = string.IsNullOrEmpty(asesorId) ? null : asesorId;
+            await _context.SaveChangesAsync();
+            TempData["Mensaje"] = $"Se asignaron {clientes.Count} clientes.";
+            TempData["TipoMensaje"] = "success";
+            return RedirectToAction(nameof(Clientes));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarCliente(int id)
+        {
+            var cliente = await _context.Clientes.FindAsync(id);
+            if (cliente != null)
+            {
+                _context.Clientes.Remove(cliente);
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = "Cliente eliminado.";
+                TempData["TipoMensaje"] = "success";
+            }
+            return RedirectToAction(nameof(Clientes));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarClientesMasivo(int[] clientesSeleccionados)
+        {
+            if (clientesSeleccionados == null || clientesSeleccionados.Length == 0) return RedirectToAction(nameof(Clientes));
+            try
+            {
+                var clientes = await _context.Clientes.Where(c => clientesSeleccionados.Contains(c.Id)).ToListAsync();
+                _context.Clientes.RemoveRange(clientes);
+                await _context.SaveChangesAsync();
+                TempData["Mensaje"] = $"Se eliminaron {clientes.Count} registros.";
+                TempData["TipoMensaje"] = "success";
+            }
+            catch (Exception)
+            {
+                TempData["Mensaje"] = "Error al eliminar masivamente.";
+                TempData["TipoMensaje"] = "danger";
+            }
+            return RedirectToAction(nameof(Clientes));
+        }
+
+        // --- IMPORTACIÓN Y EXPORTACIÓN ---
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ImportarClientes(IFormFile archivoExcel)
         {
-            if (archivoExcel == null || archivoExcel.Length == 0) return RedirectToAction("CrearCliente");
-
+            if (archivoExcel == null || archivoExcel.Length == 0) return RedirectToAction(nameof(CrearCliente));
             try
             {
-                // 1. Cargar DNI existentes de la base de datos para omitirlos instantáneamente
                 var dnisExistentes = await _context.Clientes.Select(c => c.Dni).ToHashSetAsync();
                 var dnisEnArchivo = new HashSet<string>();
 
@@ -205,7 +306,6 @@ namespace ACCOB.Controllers
                 var primeraFila = hoja.Row(1);
 
                 int colDni = 0, colNom = 0, colApe = 0, colEmail = 0, colTel = 0, colDep = 0, colProv = 0, colDist = 0, colDir = 0, colRef1 = 0, colRef2 = 0;
-
                 for (int i = 1; i <= hoja.LastColumnUsed().ColumnNumber(); i++)
                 {
                     string h = primeraFila.Cell(i).GetValue<string>().Trim().ToLower();
@@ -223,7 +323,7 @@ namespace ACCOB.Controllers
                 }
 
                 var filas = hoja.RangeUsed().RowsUsed().Skip(1);
-                List<Cliente> clientesParaInsertar = new List<Cliente>();
+                List<Cliente> listParaInsertar = new List<Cliente>();
 
                 foreach (var fila in filas)
                 {
@@ -233,23 +333,18 @@ namespace ACCOB.Controllers
                         string val = fila.Cell(col).GetValue<string>().Trim();
                         return (val == "\\N" || string.IsNullOrEmpty(val)) ? "" : val;
                     }
-
                     string dni = Leer(colDni);
-                    string nombre = Leer(colNom);
-
-                    // OMITIR SI: DNI vacío, ya existe en BD, o está repetido en el mismo Excel
-                    if (string.IsNullOrEmpty(dni) || string.IsNullOrEmpty(nombre) ||
-                        dnisExistentes.Contains(dni) || dnisEnArchivo.Contains(dni)) continue;
-
+                    string nom = Leer(colNom);
+                    if (string.IsNullOrEmpty(dni) || string.IsNullOrEmpty(nom) || dnisExistentes.Contains(dni) || dnisEnArchivo.Contains(dni)) continue;
                     dnisEnArchivo.Add(dni);
 
-                    clientesParaInsertar.Add(new Cliente
+                    listParaInsertar.Add(new Cliente
                     {
                         Dni = dni,
-                        Nombre = nombre,
+                        Nombre = nom,
                         Apellido = Leer(colApe),
-                        Email = !string.IsNullOrEmpty(Leer(colEmail)) ? Leer(colEmail) : "sin@correo.com",
                         Telefono = LimpiarTelefono(Leer(colTel)),
+                        Email = !string.IsNullOrEmpty(Leer(colEmail)) ? Leer(colEmail) : "sin@correo.com",
                         Departamento = !string.IsNullOrEmpty(Leer(colDep)) ? Leer(colDep) : "LIMA",
                         Provincia = !string.IsNullOrEmpty(Leer(colProv)) ? Leer(colProv) : "LIMA",
                         Distrito = Leer(colDist),
@@ -261,31 +356,61 @@ namespace ACCOB.Controllers
                     });
                 }
 
-                if (clientesParaInsertar.Count > 0)
+                if (listParaInsertar.Count > 0)
                 {
-                    // Guardar en bloques de 1000 para evitar errores de memoria o timeout
-                    foreach (var chunk in clientesParaInsertar.Chunk(1000))
+                    foreach (var chunk in listParaInsertar.Chunk(1000))
                     {
                         _context.Clientes.AddRange(chunk);
                         await _context.SaveChangesAsync();
                     }
-                    TempData["Mensaje"] = $"Éxito: Se importaron {clientesParaInsertar.Count} nuevos clientes.";
+                    TempData["Mensaje"] = $"Importados {listParaInsertar.Count} clientes.";
                     TempData["TipoMensaje"] = "success";
                 }
-                else
-                {
-                    TempData["Mensaje"] = "No se encontraron clientes nuevos para importar.";
-                    TempData["TipoMensaje"] = "warning";
-                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error importar");
-                TempData["Mensaje"] = "Error técnico: " + ex.Message;
-                TempData["TipoMensaje"] = "danger";
-                return RedirectToAction("CrearCliente");
-            }
+            catch (Exception ex) { _logger.LogError(ex, "Error importar"); TempData["Mensaje"] = "Error al procesar."; TempData["TipoMensaje"] = "danger"; }
             return RedirectToAction(nameof(Clientes));
+        }
+
+        public async Task<IActionResult> ExportarClientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
+        {
+            var query = _context.Clientes
+                .Include(c => c.Asesor)
+                .Include(c => c.Ventas)
+
+                .AsQueryable();
+            if (!string.IsNullOrEmpty(nombre))
+            {
+                string n = nombre.ToLower().Trim();
+                query = query.Where(c => c.Nombre.ToLower().Contains(n) || c.Apellido.ToLower().Contains(n) || c.Dni.Contains(n));
+            }
+            if (!string.IsNullOrEmpty(estado)) query = query.Where(c => c.Estado == estado);
+            if (!string.IsNullOrEmpty(provincia)) query = query.Where(c => c.Provincia.Contains(provincia));
+            if (!string.IsNullOrEmpty(distrito)) query = query.Where(c => c.Distrito.Contains(distrito));
+
+            var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Reporte");
+            string[] headers = { "Fecha Reg", "DNI", "Cliente", "Teléfono", "Estado", "Asesor", "Zona", "Plan", "Distrito", "Provincia" };
+            for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
+
+            int row = 2;
+            foreach (var c in clientes)
+            {
+                var dv = c.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
+                ws.Cell(row, 1).Value = c.FechaRegistro.ToLocalTime().ToString("g");
+                ws.Cell(row, 2).Value = c.Dni;
+                ws.Cell(row, 3).Value = c.NombreCompleto;
+                ws.Cell(row, 4).Value = c.Telefono;
+                ws.Cell(row, 5).Value = c.Estado;
+                ws.Cell(row, 6).Value = c.Asesor?.Nombre ?? "-";
+                if (dv != null) { ws.Cell(row, 7).Value = dv.ZonaNombre; ws.Cell(row, 8).Value = dv.PlanNombre; }
+                ws.Cell(row, 9).Value = c.Distrito; ws.Cell(row, 10).Value = c.Provincia;
+                row++;
+            }
+            ws.Columns().AdjustToContents();
+            using var s = new MemoryStream();
+            workbook.SaveAs(s);
+            return File(s.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Reporte_ACCOB_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
         // --- UTILITARIOS ---
@@ -295,54 +420,6 @@ namespace ACCOB.Controllers
             string t = tel.Trim();
             if (t.StartsWith("51") && t.Length > 9) return t.Substring(2);
             return t;
-        }
-
-        // POST: Eliminar Clientes Masivo
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarClientesMasivo(int[] clientesSeleccionados)
-        {
-            if (clientesSeleccionados == null || clientesSeleccionados.Length == 0)
-            {
-                TempData["Mensaje"] = "No seleccionaste ningún cliente para eliminar.";
-                TempData["TipoMensaje"] = "warning";
-                return RedirectToAction(nameof(Clientes));
-            }
-
-            try
-            {
-                // Obtenemos los clientes de la base de datos
-                var clientes = await _context.Clientes
-                    .Where(c => clientesSeleccionados.Contains(c.Id))
-                    .ToListAsync();
-
-                if (clientes.Any())
-                {
-                    int cantidad = clientes.Count;
-                    _context.Clientes.RemoveRange(clientes);
-                    await _context.SaveChangesAsync();
-
-                    TempData["Mensaje"] = $"Éxito: Se eliminaron {cantidad} clientes correctamente.";
-                    TempData["TipoMensaje"] = "success";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al eliminar clientes masivamente");
-                TempData["Mensaje"] = "Ocurrió un error técnico al intentar eliminar los registros.";
-                TempData["TipoMensaje"] = "danger";
-            }
-
-            return RedirectToAction(nameof(Clientes));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarCliente(int id)
-        {
-            var cliente = await _context.Clientes.FindAsync(id);
-            if (cliente != null) { _context.Clientes.Remove(cliente); await _context.SaveChangesAsync(); }
-            return RedirectToAction(nameof(Clientes));
         }
     }
 }

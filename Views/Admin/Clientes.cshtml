@@ -79,8 +79,7 @@
     </div>
 
     @* --- TABLA Y ACCIÓN MASIVA --- *@
-    @* Se mantiene bulkAssignForm; el action se cambia vía JS según el botón presionado *@
-    <form id="bulkAssignForm" method="post">
+    <form id="bulkActionForm" method="post">
         @Html.AntiForgeryToken()
 
         @* Barra de Acción Masiva *@
@@ -91,6 +90,8 @@
                         <i class="bi bi-check-all"></i>
                         <span id="contadorSeleccionados" class="badge bg-primary">0</span> Seleccionados:
                     </span>
+                    
+                    @* Grupo Asignación *@
                     <select name="asesorId" id="bulkAsesorId" class="form-select form-select-sm" style="width: 200px;">
                         <option value="">-- Asignar Asesor --</option>
                         @foreach (var asesor in (SelectList)ViewBag.Asesores)
@@ -98,17 +99,18 @@
                             <option value="@asesor.Value">@asesor.Text</option>
                         }
                     </select>
-                    <button type="button" onclick="confirmarAsignacionMasiva()" class="btn btn-primary btn-sm">
-                        Asignar Asesor
+                    <button type="button" onclick="ejecutarAsignacionMasiva()" class="btn btn-primary btn-sm">
+                        Asignar
                     </button>
 
                     <div class="vr mx-2"></div>
 
-                    <button type="button" onclick="confirmarEliminacionMasiva()" class="btn btn-danger btn-sm">
-                        <i class="bi bi-trash"></i> Eliminar Seleccionados
+                    @* Grupo Eliminación *@
+                    <button type="button" onclick="ejecutarEliminacionMasiva()" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Eliminar Selección
                     </button>
                 </div>
-                <small class="text-muted">Gestión rápida para múltiples registros.</small>
+                <small class="text-muted">Acciones rápidas para múltiples clientes.</small>
             </div>
         </div>
 
@@ -125,7 +127,7 @@
                                 <th>DNI</th>
                                 <th>Nombre Cliente</th>
                                 <th>Contacto</th>
-                                <th>Dirección</th>
+                                <th>Ubicación</th>
                                 <th>Estado</th>
                                 <th>Asesor Asignado</th>
                                 <th>Gestión</th>
@@ -162,6 +164,7 @@
                                             </span>
                                         </td>
                                         <td>
+                                            @* SELECT INDIVIDUAL - CORREGIDO *@
                                             <select class="form-select form-select-sm" onchange="asignarIndividual(@cliente.Id, this.value)">
                                                 <option value="">-- Sin asignar --</option>
                                                 @foreach (var asesor in (SelectList)ViewBag.Asesores)
@@ -178,11 +181,9 @@
                                             </button>
                                         </td>
                                         <td class="text-center">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarCliente(@cliente.Id, '@cliente.NombreCompleto')" title="Eliminar">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarCliente(@cliente.Id, '@cliente.NombreCompleto')" title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 }
@@ -191,7 +192,7 @@
                             {
                                 <tr>
                                     <td colspan="10" class="text-center text-muted py-4">
-                                        <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron clientes
+                                        <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron registros
                                     </td>
                                 </tr>
                             }
@@ -203,13 +204,18 @@
     </form>
 </div>
 
-@* Formularios ocultos para acciones individuales vía JS *@
+@* --- FORMULARIOS OCULTOS PARA JS --- *@
+
+@* Formulario para Asignación Individual *@
 <form id="formAsignarIndividual" asp-action="AsignarAsesor" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="clienteId" id="indivClienteId" />
     <input type="hidden" name="asesorId" id="indivAsesorId" />
 </form>
 
+@* Formulario para Eliminación Individual *@
 <form id="formEliminarCliente" asp-action="EliminarCliente" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="id" id="deleteClienteId" />
 </form>
 
@@ -222,6 +228,7 @@
     </div>
 </div>
 
+@* Modal Historial *@
 <div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -236,22 +243,22 @@
 
 @section Scripts {
     <script>
-        // 1. Reporte Excel con Filtros
+        // 1. Reporte Excel
         function generarReporte() {
             const form = document.getElementById('filterForm');
             const params = new URLSearchParams(new FormData(form)).toString();
-            window.location.href = '@Url.Action("ExportarClientes")?' + params;
+            window.location.href = '@Url.Action("ExportarClientes", "Admin")?' + params;
         }
 
-        // 2. Lógica de Checkboxes y Contador
+        // 2. Control de Selección (Checkboxes)
         const selectAll = document.getElementById('selectAll');
         const checkboxes = document.querySelectorAll('.client-checkbox');
         const contador = document.getElementById('contadorSeleccionados');
 
         function actualizarContador() {
-            const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
-            contador.innerText = seleccionados;
-            contador.className = seleccionados > 0 ? 'badge bg-primary' : 'badge bg-secondary';
+            const num = document.querySelectorAll('.client-checkbox:checked').length;
+            contador.innerText = num;
+            contador.className = num > 0 ? 'badge bg-primary' : 'badge bg-secondary';
         }
 
         selectAll.addEventListener('change', function () {
@@ -263,57 +270,64 @@
             cb.addEventListener('change', actualizarContador);
         });
 
-        // 3. Acciones Masivas (Asignar y Eliminar)
-        function confirmarAsignacionMasiva() {
-            const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
-            const asesorSelect = document.getElementById('bulkAsesorId');
-
-            if (seleccionados === 0) { alert("Selecciona al menos un cliente."); return; }
-            if (asesorSelect.value === "") { alert("Selecciona el asesor destino."); return; }
-
-            if (confirm(`¿Asignar ${seleccionados} clientes a ${asesorSelect.options[asesorSelect.selectedIndex].text}?`)) {
-                const form = document.getElementById('bulkAssignForm');
-                form.action = '@Url.Action("AsignarAsesorMasivo")';
-                form.submit();
-            }
-        }
-
-        function confirmarEliminacionMasiva() {
-            const seleccionados = document.querySelectorAll('.client-checkbox:checked').length;
-            if (seleccionados === 0) { alert("Selecciona al menos un cliente."); return; }
-
-            if (confirm(`¡ATENCIÓN! ¿Estás seguro de eliminar permanentemente a ${seleccionados} clientes? Esta acción no se puede deshacer.`)) {
-                const form = document.getElementById('bulkAssignForm');
-                form.action = '@Url.Action("EliminarClientesMasivo")';
-                form.submit();
-            }
-        }
-
-        // 4. Acciones Individuales
+        // 3. ASIGNACIÓN INDIVIDUAL (El que te fallaba)
         function asignarIndividual(clienteId, asesorId) {
             document.getElementById('indivClienteId').value = clienteId;
             document.getElementById('indivAsesorId').value = asesorId;
             document.getElementById('formAsignarIndividual').submit();
         }
 
+        // 4. ACCIONES MASIVAS
+        function ejecutarAsignacionMasiva() {
+            const num = document.querySelectorAll('.client-checkbox:checked').length;
+            const asesorSelect = document.getElementById('bulkAsesorId');
+
+            if (num === 0) { alert("Selecciona al menos un cliente."); return; }
+            if (asesorSelect.value === "") { alert("Selecciona un asesor."); return; }
+
+            if (confirm(`¿Asignar ${num} clientes a ${asesorSelect.options[asesorSelect.selectedIndex].text}?`)) {
+                const form = document.getElementById('bulkActionForm');
+                form.action = '@Url.Action("AsignarAsesorMasivo")';
+                form.submit();
+            }
+        }
+
+        function ejecutarEliminacionMasiva() {
+            const num = document.querySelectorAll('.client-checkbox:checked').length;
+            if (num === 0) { alert("Selecciona clientes para eliminar."); return; }
+
+            if (confirm(`¡ATENCIÓN! Se eliminarán ${num} clientes de forma definitiva. ¿Continuar?`)) {
+                const form = document.getElementById('bulkActionForm');
+                form.action = '@Url.Action("EliminarClientesMasivo")';
+                form.submit();
+            }
+        }
+
+        // 5. ELIMINAR INDIVIDUAL
         function eliminarCliente(id, nombre) {
-            if (confirm(`¿Eliminar permanentemente al cliente ${nombre}?`)) {
+            if (confirm(`¿Eliminar definitivamente a ${nombre}?`)) {
                 document.getElementById('deleteClienteId').value = id;
                 document.getElementById('formEliminarCliente').submit();
             }
         }
 
-        // 5. Historial con Scroll
+        // 6. HISTORIAL
         function verHistorial(clienteId) {
             const clientesData = @Json.Serialize(Model.Clientes.Select(c => new {
                 id = c.Id,
                 nombre = c.NombreCompleto,
-                venta = c.Ventas.OrderByDescending(v => v.FechaVenta).Select(v => new {
-                    zona = v.ZonaNombre, plan = v.PlanNombre, velocidad = v.VelocidadContratada, precio = v.PrecioFinal
-                }).FirstOrDefault(),
                 llamadas = c.Llamadas.Select(ll => new {
-                    fechaLlamada = ll.FechaLlamada, resultado = ll.Resultado, observaciones = ll.Observaciones,
+                    fechaLlamada = ll.FechaLlamada, 
+                    resultado = ll.Resultado, 
+                    observaciones = ll.Observaciones,
                     nombreAsesor = ll.Asesor != null ? ll.Asesor.Nombre : "Sistema"
+                }).ToList(),
+                ventas = c.Ventas.Select(v => new {
+                    zona = v.ZonaNombre,
+                    plan = v.PlanNombre,
+                    velocidad = v.VelocidadContratada,
+                    precio = v.PrecioFinal,
+                    fecha = v.FechaVenta
                 }).ToList()
             }));
 
@@ -321,27 +335,52 @@
             let html = `<h6>Cliente: <strong>${cliente.nombre}</strong></h6><hr>`;
             
             if (cliente.llamadas && cliente.llamadas.length > 0) {
-                html += `<div class="table-responsive" style="max-height: 500px; overflow-y: auto; border: 1px solid #dee2e6;">
-                            <table class="table table-sm table-striped mb-0">
+                html += `<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-striped">
                                 <thead class="table-light sticky-top">
-                                    <tr class="small">
-                                        <th>Fecha</th><th>Asesor</th><th>Resultado</th><th>Observaciones</th>
-                                    </tr>
+                                    <tr><th>Fecha</th><th>Asesor</th><th>Resultado</th><th>Observaciones</th></tr>
                                 </thead>
                                 <tbody>`;
                 
                 cliente.llamadas.sort((a, b) => new Date(b.fechaLlamada) - new Date(a.fechaLlamada)).forEach(ll => {
                     const fecha = new Date(ll.fechaLlamada).toLocaleString('es-PE');
-                    html += `<tr class="small">
-                                <td class="text-nowrap">${fecha}</td>
-                                <td class="fw-bold text-primary">${ll.nombreAsesor}</td> 
-                                <td><span class="badge bg-light text-dark border">${ll.resultado}</span></td>
-                                <td>${ll.observaciones || '-'}</td>
+                    
+                    // Contenido de la columna Observaciones
+                    let observacionesHtml = `<div class="small text-muted">${ll.observaciones || '-'}</div>`;
+
+                    // Si la venta es cerrada, inyectamos el recuadro con formato
+                    if (ll.resultado === "Venta Cerrada") {
+                        const venta = cliente.ventas[0]; // Se asume la venta asociada a este cliente
+                        if (venta) {
+                            observacionesHtml = `
+                                <div class="border-start border-success border-4 ps-2 my-2" style="background-color: #f8f9fa;">
+                                    <div class="text-success fw-bold small mb-1">
+                                        <i class="bi bi-cart-fill"></i> DATOS DE LA VENTA:
+                                    </div>
+                                    <div class="small"><strong>Zona:</strong> ${venta.zona}</div>
+                                    <div class="small"><strong>Plan:</strong> ${venta.plan}</div>
+                                    <div class="small"><strong>Tarifa:</strong> ${venta.velocidad} - S/ ${venta.precio}</div>
+                                </div>
+                                ${observacionesHtml}
+                            `;
+                        }
+                    }
+
+                    // Badge para el resultado
+                    let resultadoBadge = ll.resultado === "Venta Cerrada" 
+                        ? `<span class="badge rounded-pill bg-success px-3">${ll.resultado}</span>`
+                        : ll.resultado;
+
+                    html += `<tr>
+                                <td class="small text-nowrap">${fecha}</td>
+                                <td class="small fw-bold text-primary">${ll.nombreAsesor}</td> 
+                                <td class="small text-center">${resultadoBadge}</td>
+                                <td class="small">${observacionesHtml}</td>
                             </tr>`;
                 });
                 html += `</tbody></table></div>`;
             } else {
-                html += `<div class="text-center py-4 text-muted">No hay gestiones registradas.</div>`;
+                html += `<div class="text-center py-3 text-muted">Sin gestiones.</div>`;
             }
             
             document.getElementById('contenidoHistorial').innerHTML = html;
