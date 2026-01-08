@@ -373,44 +373,125 @@ namespace ACCOB.Controllers
 
         public async Task<IActionResult> ExportarClientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito)
         {
+            // 1. Iniciamos la consulta con las relaciones necesarias
             var query = _context.Clientes
                 .Include(c => c.Asesor)
                 .Include(c => c.Ventas)
-
+                .Include(c => c.Llamadas).ThenInclude(ll => ll.Asesor)
                 .AsQueryable();
+
+            // 2. APLICAR FILTROS IDENTICOS A LA VISTA
             if (!string.IsNullOrEmpty(nombre))
             {
                 string n = nombre.ToLower().Trim();
                 query = query.Where(c => c.Nombre.ToLower().Contains(n) || c.Apellido.ToLower().Contains(n) || c.Dni.Contains(n));
             }
-            if (!string.IsNullOrEmpty(estado)) query = query.Where(c => c.Estado == estado);
-            if (!string.IsNullOrEmpty(provincia)) query = query.Where(c => c.Provincia.Contains(provincia));
-            if (!string.IsNullOrEmpty(distrito)) query = query.Where(c => c.Distrito.Contains(distrito));
 
+            if (!string.IsNullOrEmpty(estado))
+                query = query.Where(c => c.Estado == estado);
+
+            if (!string.IsNullOrEmpty(asesorId))
+                query = (asesorId == "sin_asignar") ? query.Where(c => c.AsesorId == null) : query.Where(c => c.AsesorId == asesorId);
+
+            if (!string.IsNullOrEmpty(provincia))
+                query = query.Where(c => c.Provincia.Contains(provincia));
+
+            if (!string.IsNullOrEmpty(distrito))
+                query = query.Where(c => c.Distrito.Contains(distrito));
+
+            if (fechaInicio.HasValue)
+                query = query.Where(c => c.FechaRegistro >= fechaInicio.Value.ToUniversalTime());
+
+            if (fechaFin.HasValue)
+                query = query.Where(c => c.FechaRegistro <= fechaFin.Value.ToUniversalTime().AddDays(1));
+
+            // 3. Obtener la lista filtrada
             var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
+
+            // ... (aquí continúa el resto de tu código para generar el Excel con XLWorkbook)
+
             using var workbook = new XLWorkbook();
-            var ws = workbook.Worksheets.Add("Reporte");
-            string[] headers = { "Fecha Reg", "DNI", "Cliente", "Teléfono", "Estado", "Asesor", "Zona", "Plan", "Distrito", "Provincia" };
-            for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
+            var ws = workbook.Worksheets.Add("Reporte Detallado");
+
+            // 1. Definir Cabeceras
+            string[] headers = {
+        "Fecha Reg", "DNI", "Cliente", "Teléfono", "Email",
+        "Dirección", "Distrito", "Provincia", "Estado", "Asesor Asignado",
+        "Zona Venta", "Plan Venta", "Tarifa Venta",
+        "Última Gestión (Fecha)", "Resultado Últ. Gestión", "Asesor Últ. Gestión"
+    };
+
+            // 2. Estilo de Cabeceras (Color y Negrita)
+            var headerRow = ws.Row(1);
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = ws.Cell(1, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#003366"); // Azul oscuro
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
 
             int row = 2;
             foreach (var c in clientes)
             {
-                var dv = c.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
-                ws.Cell(row, 1).Value = c.FechaRegistro.ToLocalTime().ToString("g");
+                // Obtener datos de venta si existen
+                var venta = c.Ventas?.OrderByDescending(v => v.FechaVenta).FirstOrDefault();
+
+                // Obtener la última gestión realizada
+                var ultimaLlamada = c.Llamadas?.OrderByDescending(l => l.FechaLlamada).FirstOrDefault();
+
+                ws.Cell(row, 1).Value = c.FechaRegistro.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
                 ws.Cell(row, 2).Value = c.Dni;
                 ws.Cell(row, 3).Value = c.NombreCompleto;
                 ws.Cell(row, 4).Value = c.Telefono;
-                ws.Cell(row, 5).Value = c.Estado;
-                ws.Cell(row, 6).Value = c.Asesor?.Nombre ?? "-";
-                if (dv != null) { ws.Cell(row, 7).Value = dv.ZonaNombre; ws.Cell(row, 8).Value = dv.PlanNombre; }
-                ws.Cell(row, 9).Value = c.Distrito; ws.Cell(row, 10).Value = c.Provincia;
+                ws.Cell(row, 5).Value = string.IsNullOrEmpty(c.Email) ? "-" : c.Email;
+                ws.Cell(row, 6).Value = string.IsNullOrEmpty(c.Direccion) ? "-" : c.Direccion;
+                ws.Cell(row, 7).Value = c.Distrito;
+                ws.Cell(row, 8).Value = c.Provincia;
+                ws.Cell(row, 9).Value = c.Estado;
+                ws.Cell(row, 10).Value = c.Asesor?.Nombre ?? "Sin Asignar";
+
+                // Datos de la Venta (Zona, Plan, Tarifa)
+                if (venta != null)
+                {
+                    ws.Cell(row, 11).Value = venta.ZonaNombre;
+                    ws.Cell(row, 12).Value = venta.PlanNombre;
+                    ws.Cell(row, 13).Value = $"{venta.VelocidadContratada} - S/ {venta.PrecioFinal}";
+                }
+                else
+                {
+                    ws.Cell(row, 11).Value = "-";
+                    ws.Cell(row, 12).Value = "-";
+                    ws.Cell(row, 13).Value = "-";
+                }
+
+                // Última Gestión y su Asesor
+                if (ultimaLlamada != null)
+                {
+                    ws.Cell(row, 14).Value = ultimaLlamada.FechaLlamada.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+                    ws.Cell(row, 15).Value = ultimaLlamada.Resultado;
+                    ws.Cell(row, 16).Value = ultimaLlamada.Asesor?.Nombre ?? "Sistema";
+                }
+                else
+                {
+                    ws.Cell(row, 14).Value = "Sin gestiones";
+                    ws.Cell(row, 15).Value = "-";
+                    ws.Cell(row, 16).Value = "-";
+                }
+
                 row++;
             }
+
+            // Ajustes finales de formato
             ws.Columns().AdjustToContents();
+            ws.RangeUsed().Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.RangeUsed().Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
             using var s = new MemoryStream();
             workbook.SaveAs(s);
-            return File(s.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Reporte_ACCOB_{DateTime.Now:yyyyMMdd}.xlsx");
+            return File(s.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Reporte_Ventas_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
         }
 
         // --- UTILITARIOS ---
