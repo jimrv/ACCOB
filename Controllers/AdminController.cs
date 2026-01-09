@@ -388,6 +388,8 @@ namespace ACCOB.Controllers
 
         public async Task<IActionResult> ExportarClientes(string? nombre, string? estado, string? asesorId, DateTime? fechaInicio, DateTime? fechaFin, string? provincia, string? distrito, DateTime? fechaGestionInicio, DateTime? fechaGestionFin)
         {
+            TimeZoneInfo zonaHoraria = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+
             // 1. Iniciamos la consulta con las relaciones necesarias
             var query = _context.Clientes
                 .Include(c => c.Asesor)
@@ -434,8 +436,6 @@ namespace ACCOB.Controllers
             // 3. Obtener la lista filtrada
             var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
 
-            // ... (aquí continúa el resto de tu código para generar el Excel con XLWorkbook)
-
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Reporte Detallado");
 
@@ -468,7 +468,9 @@ namespace ACCOB.Controllers
                 // Obtener la última gestión realizada
                 var ultimaLlamada = c.Llamadas?.OrderByDescending(l => l.FechaLlamada).FirstOrDefault();
 
-                ws.Cell(row, 1).Value = c.FechaRegistro.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+                var fechaRegLocal = TimeZoneInfo.ConvertTimeFromUtc(c.FechaRegistro, zonaHoraria);
+                ws.Cell(row, 1).Value = fechaRegLocal.ToString("dd/MM/yyyy HH:mm");
+
                 ws.Cell(row, 2).Value = c.Dni;
                 ws.Cell(row, 3).Value = c.NombreCompleto;
                 ws.Cell(row, 4).Value = c.Telefono;
@@ -496,7 +498,8 @@ namespace ACCOB.Controllers
                 // Última Gestión y su Asesor
                 if (ultimaLlamada != null)
                 {
-                    ws.Cell(row, 14).Value = ultimaLlamada.FechaLlamada.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+                    var fechaGestionLocal = TimeZoneInfo.ConvertTimeFromUtc(ultimaLlamada.FechaLlamada, zonaHoraria);
+                    ws.Cell(row, 14).Value = fechaGestionLocal.ToString("dd/MM/yyyy HH:mm");
                     ws.Cell(row, 15).Value = ultimaLlamada.Resultado;
                     ws.Cell(row, 16).Value = ultimaLlamada.Asesor?.Nombre ?? "Sistema";
                 }
@@ -515,6 +518,8 @@ namespace ACCOB.Controllers
             ws.RangeUsed().Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             ws.RangeUsed().Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
+            var horaActualLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHoraria);
+            
             using var s = new MemoryStream();
             workbook.SaveAs(s);
             return File(s.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Reporte_Ventas_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
