@@ -359,7 +359,7 @@ namespace ACCOB.Controllers
                         Nombre = nom,
                         Apellido = Leer(colApe),
                         Telefono = LimpiarTelefono(Leer(colTel)),
-                        Email = !string.IsNullOrEmpty(Leer(colEmail)) ? Leer(colEmail) : "sin@correo.com",
+                        Email = string.IsNullOrWhiteSpace(Leer(colEmail)) ? null : Leer(colEmail),
                         Departamento = !string.IsNullOrEmpty(Leer(colDep)) ? Leer(colDep) : "LIMA",
                         Provincia = !string.IsNullOrEmpty(Leer(colProv)) ? Leer(colProv) : "LIMA",
                         Distrito = Leer(colDist),

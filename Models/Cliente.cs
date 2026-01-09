@@ -17,24 +17,23 @@ namespace ACCOB.Models
         [StringLength(100, ErrorMessage = "El nombre es muy largo")]
         public string Nombre { get; set; }
 
-        [Required(ErrorMessage = "El apellido es obligatorio")]
+        // CAMBIO: Quitado [Required] y añadido '?'
         [StringLength(100, ErrorMessage = "El apellido es muy largo")]
-        public string Apellido { get; set; }
+        public string? Apellido { get; set; }
 
-        // PROPIEDAD CALCULADA: para mostrar ambos juntos
+        // CAMBIO: Ajuste para manejar el apellido nulo al mostrar el nombre completo
         [NotMapped]
-        public string NombreCompleto => $"{Nombre} {Apellido}";
+        public string NombreCompleto => string.IsNullOrEmpty(Apellido) ? Nombre : $"{Nombre} {Apellido}";
 
-        [Required(ErrorMessage = "El correo es obligatorio")]
+        // CAMBIO: Quitado [Required] y añadido '?'
         [EmailAddress(ErrorMessage = "Formato de correo inválido")]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [Required(ErrorMessage = "El teléfono es obligatorio")]
         [Phone(ErrorMessage = "Formato de teléfono inválido")]
         [RegularExpression(@"^\d{9,15}$", ErrorMessage = "El teléfono debe tener entre 9 y 15 dígitos")]
         public string Telefono { get; set; }
 
-        // Nuevos campos de ubicación
         [Required(ErrorMessage = "El Departamento es obligatorio")]
         public string Departamento { get; set; }
 
@@ -44,10 +43,8 @@ namespace ACCOB.Models
         [Required(ErrorMessage = "El Distrito es obligatorio")]
         public string Distrito { get; set; }
 
-        // Direccion ahora es opcional (?)
         public string? Direccion { get; set; }
 
-        // Números de referencia opcionales
         public string? NumRef1 { get; set; }
         public string? NumRef2 { get; set; }
 
