@@ -174,12 +174,8 @@
                                             <input type="checkbox" name="clientesSeleccionados" value="@cliente.Id" class="form-check-input client-checkbox" />
                                         </td>
                                         <td>
-                                            @* Forzamos el Kind a UTC para evitar el error de TimeZoneInfo *@
-                                            @{
-                                                var fechaUtc = DateTime.SpecifyKind(cliente.FechaRegistro, DateTimeKind.Utc);
-                                                var fechaLocal = TimeZoneInfo.ConvertTimeFromUtc(fechaUtc, zonaPeru);
-                                            }
-                                            @fechaLocal.ToString("dd/MM/yyyy HH:mm")
+                                            @TimeZoneInfo.ConvertTimeFromUtc(cliente.FechaRegistro,
+                                            zonaPeru).ToString("dd/MM/yyyy HH:mm")
                                         </td>
                                         <td><strong>@cliente.Dni</strong></td>
                                         <td>@cliente.NombreCompleto</td>

@@ -4,8 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using ACCOB.Data;
 
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true); 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
