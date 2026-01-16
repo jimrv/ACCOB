@@ -66,10 +66,13 @@ namespace ACCOB.Controllers
 
         // 2. LISTADO: Buscador actualizado para Nombres y Apellidos
         [HttpGet]
-        public async Task<IActionResult> Listado(string buscar, string estado)
+        public async Task<IActionResult> Listado(string buscar, string estado, string resultado)
         {
             var userId = _userManager.GetUserId(User);
-            var query = _context.Clientes.Where(c => c.AsesorId == userId).AsQueryable();
+            var query = _context.Clientes
+                .Where(c => c.AsesorId == userId)
+                .Include(c => c.Llamadas)
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(buscar))
             {
@@ -87,10 +90,16 @@ namespace ACCOB.Controllers
                 query = query.Where(c => c.Estado.ToLower() == estado.ToLower().Trim());
             }
 
+            if (!string.IsNullOrEmpty(resultado))
+            {
+                query = query.Where(c => c.Llamadas.Any(l => l.Resultado == resultado));
+            }
+
             var clientes = await query.OrderByDescending(c => c.FechaRegistro).ToListAsync();
 
             ViewBag.BusquedaActual = buscar;
             ViewBag.EstadoActual = estado;
+            ViewBag.ResultadoActual = resultado;
 
             return View(clientes);
         }
