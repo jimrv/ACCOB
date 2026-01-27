@@ -19,7 +19,8 @@ namespace ACCOB.Data
                 new Zona { Nombre = "Destacadas Lima" },
                 new Zona { Nombre = "Destacadas Hogar" },
                 new Zona { Nombre = "CYBER LIMA" },
-                new Zona { Nombre = "CYBER PROVINCIAS" }
+                new Zona { Nombre = "CYBER PROVINCIAS" },
+                new Zona { Nombre = "Planes CLARO" }
             };
             context.Zonas.AddRange(zonas);
             await context.SaveChangesAsync();
@@ -32,6 +33,7 @@ namespace ACCOB.Data
             var zona6 = zonas[5]; //Condominios y edificios
             var zona7 = zonas[6]; //CYBER LIMA
             var zona8 = zonas[7]; //CYBER PROVINCIAS
+            var zona9 = zonas[8]; //Planes CLARO
 
             var planes = new List<PlanWin>
             {
@@ -76,7 +78,10 @@ namespace ACCOB.Data
 
                 //Planes CYBER PROVINCIAS
                 new PlanWin { Nombre = "CYBER FIBRA (Solo Internet)", ZonaId = zona8.Id },
-                new PlanWin { Nombre = "CYBER MAX (Internet + WTV + L1MAX)", ZonaId = zona8.Id }
+                new PlanWin { Nombre = "CYBER MAX (Internet + WTV + L1MAX)", ZonaId = zona8.Id },
+
+                //Planes CLARO
+                new PlanWin { Nombre = "CLARO MAX Iliminitado (Internet + L1MAX)", ZonaId = zona9.Id },
             };
             context.PlanesWin.AddRange(planes);
             await context.SaveChangesAsync();
@@ -124,6 +129,9 @@ namespace ACCOB.Data
             //Cyber PROVINCIAS
             var planCyberFibra = planes[25];
             var planCyberMaxPro = planes[26];
+
+            //Planes CLARO
+            var planClaroMax = planes[27];
 
             context.TarifasPlan.AddRange(new List<TarifaPlan>
             {
@@ -227,6 +235,10 @@ namespace ACCOB.Data
 
                 //Planes Cyber PROVINCIAS - Cyber Max
                 new TarifaPlan { Velocidad = "1000 Mbps", PrecioRegular = 129.90m, PrecioPromocional = 1m, DescripcionDescuento = "50% desc. x 2 meses", PlanWinId = planCyberMaxPro.Id },
+
+                //Planes CLARO - Claro Max Iliminitado
+                new TarifaPlan { Velocidad = "Ilimitado", PrecioRegular = 79.90m, PrecioPromocional = 39.95m, DescripcionDescuento = "50% desc. x 6 meses", PlanWinId = planClaroMax.Id },
+                new TarifaPlan { Velocidad = "Ilimitado", PrecioRegular = 95.90m, PrecioPromocional = 47.95m, DescripcionDescuento = "50% desc. x 6 meses", PlanWinId = planClaroMax.Id }
             });
 
             await context.SaveChangesAsync();
