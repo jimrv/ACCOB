@@ -164,7 +164,7 @@ namespace ACCOB.Migrations
 
                     b.HasIndex("AsesorId");
 
-                    b.ToTable("Clientes");
+                    b.ToTable("Clientes", (string)null);
                 });
 
             modelBuilder.Entity("ACCOB.Models.PlanWin", b =>
@@ -186,7 +186,7 @@ namespace ACCOB.Migrations
 
                     b.HasIndex("ZonaId");
 
-                    b.ToTable("PlanesWin");
+                    b.ToTable("PlanesWin", (string)null);
                 });
 
             modelBuilder.Entity("ACCOB.Models.RegistroLlamada", b =>
@@ -224,7 +224,7 @@ namespace ACCOB.Migrations
 
                     b.HasIndex("ClienteId");
 
-                    b.ToTable("RegistroLlamadas");
+                    b.ToTable("RegistroLlamadas", (string)null);
                 });
 
             modelBuilder.Entity("ACCOB.Models.RegistroVenta", b =>
@@ -260,7 +260,7 @@ namespace ACCOB.Migrations
 
                     b.HasIndex("ClienteId");
 
-                    b.ToTable("RegistrosVentas");
+                    b.ToTable("RegistrosVentas", (string)null);
                 });
 
             modelBuilder.Entity("ACCOB.Models.TarifaPlan", b =>
@@ -292,7 +292,7 @@ namespace ACCOB.Migrations
 
                     b.HasIndex("PlanWinId");
 
-                    b.ToTable("TarifasPlan");
+                    b.ToTable("TarifasPlan", (string)null);
                 });
 
             modelBuilder.Entity("ACCOB.Models.Zona", b =>
@@ -309,7 +309,7 @@ namespace ACCOB.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Zonas");
+                    b.ToTable("Zonas", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
