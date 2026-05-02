@@ -158,6 +158,7 @@
                                 <th style="width: 15%">Nombre Cliente</th>
                                 <th style="width: 10%">Contacto</th>
                                 <th>Ubicación</th>
+                                <th>Deuda</th>
                                 <th >Estado</th>
                                 <th>Asesor Asig.</th>
                                 <th class="text-center">Gestión</th>
@@ -186,6 +187,12 @@
                                         <td>
                                             <div class="small fw-bold"><i class="bi bi-geo-alt"></i> @cliente.Distrito, @cliente.Provincia</div>
                                             <div class="text-muted" style="font-size: 0.75rem;">@cliente.Direccion</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold @(cliente.DeudaTotal > 0 ? "text-danger" : "text-success")">
+                                                S/ @cliente.DeudaTotal.ToString("N2")
+                                            </div>
+                                            <div class="text-muted" style="font-size: 0.7rem;">@cliente.Clasificacion</div>
                                         </td>
                                         <td>
                                             <span class="badge @(cliente.Estado == "Cerrado" ? "bg-success" : 
@@ -351,6 +358,7 @@
                     fechaLlamada = ll.FechaLlamada, 
                     resultado = ll.Resultado, 
                     observaciones = ll.Observaciones,
+                    proximaLlamada = ll.ProximaLlamada,
                     nombreAsesor = ll.Asesor != null ? ll.Asesor.Nombre : "Sistema"
                 }).ToList(),
                 ventas = c.Ventas.Select(v => new {
@@ -359,6 +367,11 @@
                     velocidad = v.VelocidadContratada,
                     precio = v.PrecioFinal,
                     fecha = v.FechaVenta
+                }).ToList(),
+                pagos = c.Pagos.Select(p => new {
+                    monto = p.MontoPagado,
+                    fechaOp = p.FechaOperacion,
+                    metodo = p.MetodoPago
                 }).ToList()
             }));
 
@@ -403,10 +416,33 @@
                             `;
                         }
                     }
+                    else if (ll.resultado === "Compromiso de Pago" || ll.resultado === "Pago Realizado") {
+                        // Buscamos el pago que coincida con la fecha de la gestión o la fecha de operación
+                        const pago = cliente.pagos.find(p => 
+                            new Date(p.fechaOp).toDateString() === new Date(ll.proximaLlamada || ll.fechaLlamada).toDateString()
+                        );
+
+                        const monto = pago ? `S/ ${pago.monto.toFixed(2)}` : "Monto no registrado";
+                        const fechaPromesa = ll.proximaLlamada ? new Date(ll.proximaLlamada).toLocaleDateString('es-PE') : "Hoy";
+
+                        observacionesHtml = `
+                            <div class="border-start border-primary border-4 ps-2 my-2 py-1" style="background-color: #f0f7ff;">
+                                <div class="text-primary fw-bold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-cash-stack"></i> DETALLE DE COBRANZA:
+                                </div>
+                                <div class="small"><strong>Monto:</strong> ${monto}</div>
+                                <div class="small"><strong>Fecha Promesa/Pago:</strong> ${fechaPromesa}</div>
+                                <div class="small"><strong>Estado:</strong> ${ll.resultado}</div>
+                            </div>
+                            ${observacionesHtml}
+                        `;
+                    }
 
                     let resultadoBadge = ll.resultado === "Venta Cerrada" 
                         ? `<span class="badge rounded-pill bg-success px-3 py-2" style="font-size: 0.75rem;">${ll.resultado}</span>`
-                        : `<span class="text-dark small">${ll.resultado}</span>`;
+                        : (ll.resultado === "Pago Realizado" || ll.resultado === "Compromiso de Pago")
+                            ? `<span class="badge rounded-pill bg-primary px-3 py-2" style="font-size: 0.75rem;">${ll.resultado}</span>`
+                            : `<span class="text-dark small">${ll.resultado}</span>`;
 
                     html += `
                         <tr style="border-bottom: 1px solid #f0f0f0;">

@@ -114,6 +114,7 @@ namespace ACCOB.Controllers
             var cliente = await _context.Clientes
                 .Include(c => c.Llamadas)
                 .Include(c => c.Ventas)
+                .Include(c => c.Pagos)
                 .FirstOrDefaultAsync(m => m.Id == id && m.AsesorId == userId);
 
             if (cliente == null) return NotFound();
@@ -151,15 +152,14 @@ namespace ACCOB.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RegistrarLlamada(int clienteId, string resultado, string observaciones, DateTime? proximaLlamada, int? tarifaId)
+        public async Task<IActionResult> RegistrarLlamada(int clienteId, string resultado, string observaciones, DateTime? proximaLlamada, int? tarifaId, decimal? montoPagado, string? metodoPago, string? clasificacion)
         {
             var userId = _userManager.GetUserId(User);
 
-            DateTime? fechaRecordatorio = null;
-            if (proximaLlamada.HasValue)
-            {
-                fechaRecordatorio = DateTime.SpecifyKind(proximaLlamada.Value, DateTimeKind.Utc);
-            }
+            // 1. Normalizar fechas para PostgreSQL (UTC)
+            DateTime? fechaReferencia = proximaLlamada.HasValue
+                ? DateTime.SpecifyKind(proximaLlamada.Value, DateTimeKind.Utc)
+                : null;
 
             var nuevaLlamada = new RegistroLlamada
             {
@@ -168,30 +168,27 @@ namespace ACCOB.Controllers
                 Resultado = resultado,
                 Observaciones = observaciones,
                 FechaLlamada = DateTime.UtcNow,
-                ProximaLlamada = fechaRecordatorio
+                ProximaLlamada = fechaReferencia // Esta fecha se mostrará en el historial como "Recordatorio"
             };
 
             try
             {
                 _context.RegistroLlamadas.Add(nuevaLlamada);
+                var cliente = await _context.Clientes.Include(c => c.Pagos).FirstOrDefaultAsync(c => c.Id == clienteId);
 
-                var cliente = await _context.Clientes.FindAsync(clienteId);
                 if (cliente != null)
                 {
+                    // 1. LÓGICA DE VENTA CERRADA
                     if (resultado == "Venta Cerrada")
                     {
                         cliente.Estado = "Cerrado";
-
                         if (tarifaId.HasValue)
                         {
-                            var tarifa = await _context.TarifasPlan
-                                .Include(t => t.Plan)
-                                .ThenInclude(p => p.Zona)
+                            var tarifa = await _context.TarifasPlan.Include(t => t.Plan).ThenInclude(p => p.Zona)
                                 .FirstOrDefaultAsync(t => t.Id == tarifaId.Value);
-
                             if (tarifa != null)
                             {
-                                var venta = new RegistroVenta
+                                _context.RegistrosVentas.Add(new RegistroVenta
                                 {
                                     ClienteId = clienteId,
                                     ZonaNombre = tarifa.Plan.Zona.Nombre,
@@ -199,10 +196,36 @@ namespace ACCOB.Controllers
                                     VelocidadContratada = tarifa.Velocidad,
                                     PrecioFinal = tarifa.PrecioPromocional,
                                     FechaVenta = DateTime.UtcNow
-                                };
-                                _context.RegistrosVentas.Add(venta);
+                                });
                             }
                         }
+                    }
+                    // 2. LÓGICA DE COBRANZA (Compromiso o Pago Realizado)
+                    else if (resultado == "Compromiso de Pago" || resultado == "Pago Realizado")
+                    {
+                        if (montoPagado.HasValue && montoPagado.Value > 0)
+                        {
+                            var nuevoPago = new Pago
+                            {
+                                ClienteId = clienteId,
+                                MontoPagado = montoPagado.Value,
+                                // IMPORTANTE: Se usa la fecha del calendario o la actual si es pago inmediato
+                                FechaOperacion = fechaReferencia ?? DateTime.UtcNow,
+                                MetodoPago = metodoPago ?? "Efectivo",
+                                TipoPago = (montoPagado.Value >= cliente.DeudaTotal) ? "Total" : "Parcial"
+                            };
+                            _context.Pagos.Add(nuevoPago);
+
+                            // Restar de la deuda SOLO si se confirma el pago
+                            if (resultado == "Pago Realizado")
+                            {
+                                cliente.DeudaTotal -= montoPagado.Value;
+                                if (cliente.DeudaTotal < 0) cliente.DeudaTotal = 0;
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(clasificacion)) cliente.Clasificacion = clasificacion;
+                        cliente.Estado = "En Gestión";
                     }
                     else if (cliente.Estado == "Pendiente")
                     {
@@ -218,7 +241,7 @@ namespace ACCOB.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Mensaje"] = "Error al registrar: " + ex.Message;
+                TempData["Mensaje"] = "Error: " + ex.Message;
                 TempData["TipoMensaje"] = "danger";
             }
 

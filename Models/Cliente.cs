@@ -48,6 +48,11 @@ namespace ACCOB.Models
         public string? NumRef1 { get; set; }
         public string? NumRef2 { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DeudaTotal { get; set; } = 0;
+        // Clasificación: Preventivo, Judicial, Extrajudicial
+        public string Clasificacion { get; set; } = "Preventivo";
+
         public string Estado { get; set; } = "Pendiente";
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
         public string? AsesorId { get; set; }
@@ -56,5 +61,6 @@ namespace ACCOB.Models
         public virtual ApplicationUser? Asesor { get; set; }
         public virtual ICollection<RegistroLlamada> Llamadas { get; set; } = new List<RegistroLlamada>();
         public virtual ICollection<RegistroVenta> Ventas { get; set; } = new List<RegistroVenta>();
+        public virtual ICollection<Pago> Pagos { get; set; } = new List<Pago>();
     }
 }

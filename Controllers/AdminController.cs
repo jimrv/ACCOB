@@ -166,6 +166,7 @@ namespace ACCOB.Controllers
             var query = _context.Clientes
                 .Include(c => c.Asesor)
                 .Include(c => c.Ventas)
+                .Include(c => c.Pagos)
                 .Include(c => c.Llamadas).ThenInclude(l => l.Asesor)
                 .AsQueryable();
 
@@ -320,7 +321,7 @@ namespace ACCOB.Controllers
                 var hoja = workbook.Worksheet(1);
                 var primeraFila = hoja.Row(1);
 
-                int colDni = 0, colNom = 0, colApe = 0, colEmail = 0, colTel = 0, colDep = 0, colProv = 0, colDist = 0, colDir = 0, colRef1 = 0, colRef2 = 0;
+                int colDni = 0, colNom = 0, colApe = 0, colEmail = 0, colTel = 0, colDep = 0, colProv = 0, colDist = 0, colDir = 0, colRef1 = 0, colRef2 = 0, colDeuda = 0, colClasif = 0;
                 for (int i = 1; i <= hoja.LastColumnUsed().ColumnNumber(); i++)
                 {
                     string h = primeraFila.Cell(i).GetValue<string>().Trim().ToLower();
@@ -335,6 +336,8 @@ namespace ACCOB.Controllers
                     else if (h.Contains("dir")) colDir = i;
                     else if (h.Contains("ref1") || h.Contains("referencia")) colRef1 = i;
                     else if (h.Contains("ref2")) colRef2 = i;
+                    else if (h.Contains("deuda") || h.Contains("monto")) colDeuda = i;
+                    else if (h.Contains("clasif") || h.Contains("tipo")) colClasif = i;
                 }
 
                 var filas = hoja.RangeUsed().RowsUsed().Skip(1);
@@ -366,6 +369,8 @@ namespace ACCOB.Controllers
                         Direccion = Leer(colDir),
                         NumRef1 = LimpiarTelefono(Leer(colRef1)),
                         NumRef2 = LimpiarTelefono(Leer(colRef2)),
+                        DeudaTotal = decimal.TryParse(Leer(colDeuda), out decimal d) ? d : 0,
+                        Clasificacion = !string.IsNullOrEmpty(Leer(colClasif)) ? Leer(colClasif) : "Preventivo",
                         Estado = "Pendiente",
                         FechaRegistro = DateTime.UtcNow
                     });
@@ -443,6 +448,7 @@ namespace ACCOB.Controllers
             string[] headers = {
         "Fecha Reg", "DNI", "Cliente", "Teléfono", "Email",
         "Dirección", "Distrito", "Provincia", "Estado", "Asesor Asignado",
+        "Deuda Actual", "Clasificación",
         "Zona Venta", "Plan Venta", "Tarifa Venta",
         "Última Gestión (Fecha)", "Resultado Últ. Gestión", "Asesor Últ. Gestión"
     };
@@ -478,36 +484,38 @@ namespace ACCOB.Controllers
                 ws.Cell(row, 6).Value = string.IsNullOrEmpty(c.Direccion) ? "-" : c.Direccion;
                 ws.Cell(row, 7).Value = c.Distrito;
                 ws.Cell(row, 8).Value = c.Provincia;
-                ws.Cell(row, 9).Value = c.Estado;
-                ws.Cell(row, 10).Value = c.Asesor?.Nombre ?? "Sin Asignar";
+                ws.Cell(row, 11).Value = c.DeudaTotal;
+                ws.Cell(row, 12).Value = c.Clasificacion;
+                ws.Cell(row, 13).Value = c.Estado;
+                ws.Cell(row, 14).Value = c.Asesor?.Nombre ?? "Sin Asignar";
 
                 // Datos de la Venta (Zona, Plan, Tarifa)
                 if (venta != null)
                 {
-                    ws.Cell(row, 11).Value = venta.ZonaNombre;
-                    ws.Cell(row, 12).Value = venta.PlanNombre;
-                    ws.Cell(row, 13).Value = $"{venta.VelocidadContratada} - S/ {venta.PrecioFinal}";
+                    ws.Cell(row, 13).Value = venta.ZonaNombre;
+                    ws.Cell(row, 14).Value = venta.PlanNombre;
+                    ws.Cell(row, 15).Value = $"{venta.VelocidadContratada} - S/ {venta.PrecioFinal}";
                 }
                 else
                 {
-                    ws.Cell(row, 11).Value = "-";
-                    ws.Cell(row, 12).Value = "-";
                     ws.Cell(row, 13).Value = "-";
+                    ws.Cell(row, 14).Value = "-";
+                    ws.Cell(row, 15).Value = "-";
                 }
 
                 // Última Gestión y su Asesor
                 if (ultimaLlamada != null)
                 {
                     var fechaGestionLocal = TimeZoneInfo.ConvertTimeFromUtc(ultimaLlamada.FechaLlamada, zonaHoraria);
-                    ws.Cell(row, 14).Value = fechaGestionLocal.ToString("dd/MM/yyyy HH:mm");
-                    ws.Cell(row, 15).Value = ultimaLlamada.Resultado;
-                    ws.Cell(row, 16).Value = ultimaLlamada.Asesor?.Nombre ?? "Sistema";
+                    ws.Cell(row, 16).Value = fechaGestionLocal.ToString("dd/MM/yyyy HH:mm");
+                    ws.Cell(row, 17).Value = ultimaLlamada.Resultado;
+                    ws.Cell(row, 18).Value = ultimaLlamada.Asesor?.Nombre ?? "Sistema";
                 }
                 else
                 {
-                    ws.Cell(row, 14).Value = "Sin gestiones";
-                    ws.Cell(row, 15).Value = "-";
-                    ws.Cell(row, 16).Value = "-";
+                    ws.Cell(row, 16).Value = "Sin gestiones";
+                    ws.Cell(row, 17).Value = "-";
+                    ws.Cell(row, 18).Value = "-";
                 }
 
                 row++;
@@ -519,7 +527,7 @@ namespace ACCOB.Controllers
             ws.RangeUsed().Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
             var horaActualLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaHoraria);
-            
+
             using var s = new MemoryStream();
             workbook.SaveAs(s);
             return File(s.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Reporte_Ventas_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
