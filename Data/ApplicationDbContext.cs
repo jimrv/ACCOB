@@ -17,4 +17,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<TarifaPlan> TarifasPlan { get; set; }
     public DbSet<RegistroVenta> RegistrosVentas { get; set; }
     public DbSet<Pago> Pagos { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        // 1. Conservar la configuración base de Identity (Esencial)
+        base.OnModelCreating(builder);
+
+        // 2. Configuración para que las llamadas se mantengan vivas al eliminar al asesor
+        builder.Entity<RegistroLlamada>()
+            .HasOne(l => l.Asesor)
+            .WithMany()
+            .HasForeignKey(l => l.AsesorId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // 3. Configuración para que los clientes pasen a "Sin Asignar" (CORREGIDO)
+        builder.Entity<Cliente>()
+            .HasOne(c => c.Asesor)
+            .WithMany() 
+            .HasForeignKey(c => c.AsesorId)
+            .OnDelete(DeleteBehavior.SetNull);
+    }
 }

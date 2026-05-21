@@ -142,15 +142,49 @@ namespace ACCOB.Controllers
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
+
             if (user.UserName == User.Identity.Name)
             {
                 TempData["Mensaje"] = "No puedes eliminar tu cuenta.";
                 TempData["TipoMensaje"] = "warning";
                 return RedirectToAction(nameof(Usuarios));
             }
-            await _userManager.DeleteAsync(user);
-            TempData["Mensaje"] = "Usuario eliminado.";
-            TempData["TipoMensaje"] = "success";
+
+            try
+            {
+                // 1. Buscar todos los clientes que tienen asignado a este asesor
+                var clientesAsignados = await _context.Clientes.Where(c => c.AsesorId == id).ToListAsync();
+
+                // 2. Colocar su AsesorId en null para dejarlos "Sin Asignar"
+                foreach (var cliente in clientesAsignados)
+                {
+                    cliente.AsesorId = null;
+                }
+
+                // Guardamos los cambios de los clientes desasignados antes de borrar al usuario
+                await _context.SaveChangesAsync();
+
+                // 3. Eliminar definitivamente el asesor de AspNetUsers
+                var result = await _userManager.DeleteAsync(user);
+
+                if (result.Succeeded)
+                {
+                    TempData["Mensaje"] = $"Asesor {user.Nombre} eliminado. Los clientes asignados pasaron a estado 'Sin Asignar'.";
+                    TempData["TipoMensaje"] = "success";
+                }
+                else
+                {
+                    TempData["Mensaje"] = "Error al eliminar el usuario del sistema de autenticación.";
+                    TempData["TipoMensaje"] = "danger";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar asesor con historial.");
+                TempData["Mensaje"] = "No se pudo eliminar el asesor debido a un conflicto con el historial de llamadas.";
+                TempData["TipoMensaje"] = "danger";
+            }
+
             return RedirectToAction(nameof(Usuarios));
         }
 
